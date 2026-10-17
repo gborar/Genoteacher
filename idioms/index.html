@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14213D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Idioms">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <title>Idiom Trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,6 +127,44 @@ p { margin: 0; }
 .box { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg); white-space: nowrap; }
 .box.m { background: var(--ok); color: #fff; }
 
+
+/* home */
+.hero { background: var(--ink); color: #fff; border-radius: 26px; padding: 20px; display: grid; gap: 16px; box-shadow: 6px 6px 0 var(--hi); }
+.hero-top { display: flex; gap: 14px; align-items: center; justify-content: space-between; }
+.hello { font-weight: 700; color: var(--hi); font-size: .95rem; }
+.hero h2 { color: #fff; font-size: 1.65rem; }
+.ring { --p: 0; flex: 0 0 auto; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: radial-gradient(closest-side, var(--ink) 74%, transparent 75% 100%), conic-gradient(var(--hi) calc(var(--p) * 1%), rgba(255,255,255,.18) 0); }
+.ring b { font-family: var(--f-display); font-weight: 400; font-size: 1.9rem; line-height: 1; display: block; }
+.ring small { font-size: .7rem; font-weight: 700; opacity: .8; display: block; }
+.teaser { border: 2px dashed rgba(255,255,255,.35); background: rgba(255,255,255,.06); border-radius: 18px; padding: 14px 10px; display: grid; gap: 6px; color: #fff; }
+.teaser .emoji { font-size: clamp(2rem, 10vw, 2.8rem); }
+.teaser .tq { font-weight: 700; font-size: .95rem; color: var(--hi); min-height: 1.4em; }
+.teaser .tq.ans { font-family: var(--f-display); font-weight: 400; font-size: 1.35rem; color: #fff; }
+.cta { border: 0; border-radius: 16px; background: var(--hi); color: var(--ink); font-family: var(--f-display); font-size: 1.45rem; min-height: 64px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 0 #C99A1B; }
+.cta:active { transform: translateY(4px); box-shadow: 0 1px 0 #C99A1B; }
+.cta small { font-family: var(--f-body); font-size: .85rem; font-weight: 700; opacity: .75; }
+.cta:disabled { opacity: .5; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tile { border: 3px solid var(--ink); border-radius: 18px; background: var(--card); padding: 12px 6px; display: grid; justify-items: center; gap: 2px; box-shadow: 4px 4px 0 var(--ink); }
+.tile:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.tile .ti { font-family: var(--f-emoji); font-size: 1.8rem; line-height: 1.2; }
+.tile strong { font-family: var(--f-display); font-weight: 400; font-size: 1.05rem; }
+.tile small { font-size: .75rem; color: var(--muted); font-weight: 700; }
+.tile:disabled { opacity: .45; }
+.utiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.utile { position: relative; }
+.utile input { position: absolute; opacity: 0; inset: 0; }
+.utile span { display: grid; gap: 6px; border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--card); }
+.utile span b { display: flex; justify-content: space-between; font-size: .9rem; }
+.utile span em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--muted); }
+.utile .meter { height: 8px; border-width: 1.5px; }
+.allu { border: 0; padding: 0; background: none; text-align: left; font: inherit; }
+.allu > span { border-style: dashed !important; opacity: 1 !important; }
+.utile input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.utile input:not(:checked) + span { opacity: .45; }
+.utile input:focus-visible + span { outline: 4px solid #1E7FD0; outline-offset: 2px; }
+.me { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .wrap.wide { max-width: 1040px; }
 .field { display: grid; gap: 4px; flex: 1 1 180px; }
 .field input, .codebox, textarea { min-height: 48px; border: 3px solid var(--ink); border-radius: 14px; padding: 10px 14px; font-weight: 700; width: 100%; min-width: 0; background: var(--card); }
@@ -353,44 +397,45 @@ function norm(s) {
 /* ---------- home ---------- */
 function home() {
   document.querySelector(".wrap").classList.remove("wide");
-  const p = pool();
-  const unitBoxes = UNITS.map(([v, name]) => `<label><input type="checkbox" id="u${v}" value="${v}" ${P.units.includes(v) ? "checked" : ""}><span>${name}</span></label>`).join("");
-  const rows = UNITS.map(([v, name]) => { const l = BOOK.filter(x => x.u === v), m = mastered(l);
-    return `<div class="unitrow"><span>${name}</span><div class="meter"><i style="width:${l.length ? m / l.length * 100 : 0}%"></i></div><b>${m}/${l.length}</b></div>`; }).join("");
-  const m = mastered(p);
+  const p = pool(), m = mastered(p), pct = p.length ? Math.round(m / p.length * 100) : 0;
+  const first = P.name ? esc(P.name.split(" ")[0]) : "";
+  const utiles = UNITS.map(([v, name]) => { const l = BOOK.filter(x => x.u === v), mm = mastered(l);
+    return `<label class="utile"><input type="checkbox" id="u${v}" value="${v}" ${P.units.includes(v) ? "checked" : ""}><span><b>${name}<em>${mm}/${l.length}</em></b><span class="meter" style="display:block;padding:0;border-radius:999px"><i style="width:${l.length ? mm / l.length * 100 : 0}%"></i></span></span></label>`; }).join("");
+  const todo = p.filter(x => box(x) < MASTER), tease = (todo.length ? todo : p)[Math.floor(Math.random() * Math.max(1, (todo.length ? todo : p).length))];
   $("view").innerHTML = `
   <div style="display:grid;gap:16px">
+    <section class="hero">
+      <div class="hero-top">
+        <div style="display:grid;gap:4px"><p class="hello">${first ? `Hi, ${first}!` : "Hi there!"}</p><h2>${m === p.length && p.length ? "You've mastered them all!" : "Learn the idioms before the big game"}</h2></div>
+        <div class="ring" style="--p:${pct}" aria-label="${m} of ${p.length} mastered"><div><b>${m}</b><small>of ${p.length}<br>mastered</small></div></div>
+      </div>
+      ${tease ? `<button class="teaser" type="button" id="teaser"><span class="emoji">${tease.c}</span><span class="tq" id="tq">Can you guess it? Tap to check</span></button>` : ""}
+      <button class="cta" type="button" id="goQuiz" ${p.length ? "" : "disabled"}>Start a quiz <small>10 questions</small></button>
+    </section>
+    <section class="tiles">
+      <button class="tile" type="button" id="goCards" ${p.length ? "" : "disabled"}><span class="ti">🃏</span><strong>Flashcards</strong><small>${p.length} cards</small></button>
+      <button class="tile" type="button" id="goMiss" ${P.miss.length ? "" : "disabled"}><span class="ti">🔁</span><strong>Mistakes</strong><small>${P.miss.length} to review</small></button>
+      <button class="tile" type="button" id="goList"><span class="ti">📖</span><strong>Word list</strong><small>Search</small></button>
+    </section>
     <section class="panel">
-      <h2>Learn the idioms before the big game</h2>
-      <p>Choose your units, study the cards, then test yourself. An idiom is <b>mastered</b> when you get it right ${MASTER} times in a row.</p>
-      <p class="label">Units</p>
-      <div class="units" id="units">${unitBoxes}</div>
-      <div class="stats"><span>${p.length} idioms selected</span><span>${m} mastered</span></div>
-      <div class="meter"><i style="width:${p.length ? m / p.length * 100 : 0}%"></i></div>
+      <div class="me"><p class="label">Your units</p><p class="note">Tap a unit to add or remove it</p></div>
+      <div class="utiles" id="units">${utiles}<button class="utile allu" type="button" id="allUnits"><span><b>${P.units.length === UNITS.length ? "Clear all" : "All units"}<em>${BOOK.length}</em></b><span class="note" style="font-size:.75rem">${P.units.length === UNITS.length ? "Start from one unit" : "Study everything"}</span></span></button></div>
+      <p class="note">An idiom is mastered when you get it right ${MASTER} times in a row. Progress is saved on this phone. <button class="link" type="button" id="reset">Start again from zero</button></p>
     </section>
     <section class="panel">
       <p class="label">Class scoreboard</p>
-      ${P.name ? `<p>You are <b>${esc(P.name)}</b>${P.group ? ` (${esc(P.group)})` : ""}. When you finish studying, send your progress code to your teacher. <button class="link" type="button" id="rename">Change name</button></p>
-        <button class="btn primary" type="button" id="send">Send my progress</button>`
+      ${P.name ? `<div class="me"><p><b>${esc(P.name)}</b>${P.group ? ` · ${esc(P.group)}` : ""}</p><button class="link" type="button" id="rename">Change name</button></div>
+        <button class="btn primary" type="button" id="send">Send my progress to my teacher</button>`
       : `<p>Write your name so your teacher can put you on the class scoreboard.</p>
         <form class="row" id="nameForm"><div class="field"><label class="label" for="nm">Name and surname</label><input id="nm" maxlength="40" autocomplete="name" required></div>
-        <div class="field" style="flex:0 1 120px"><label class="label" for="gr">Group</label><input id="gr" maxlength="10" placeholder="2º B"></div>
+        <div class="field" style="flex:0 1 110px"><label class="label" for="gr">Group</label><input id="gr" maxlength="10" placeholder="2º B"></div>
         <button class="btn primary" style="align-self:end">Save</button></form>`}
-    </section>
-    <section class="modes">
-      <button class="mode" type="button" id="goCards" ${p.length ? "" : "disabled"}><strong>1 · Flashcards</strong><small>See each idiom with its emojis, meaning and example.</small></button>
-      <button class="mode primary" type="button" id="goQuiz" ${p.length ? "" : "disabled"}><strong>2 · Quiz</strong><small>10 questions. The ones you don't know yet come first.</small></button>
-      <button class="mode" type="button" id="goMiss" ${P.miss.length ? "" : "disabled"}><strong>Mistakes (${P.miss.length})</strong><small>A quiz with only the idioms you got wrong.</small></button>
-      <button class="mode" type="button" id="goList"><strong>Word list</strong><small>All the idioms of your units, with search.</small></button>
-    </section>
-    <section class="panel">
-      <p class="label">Your progress by unit</p>
-      <div class="unitrows">${rows}</div>
-      <p style="font-size:.85rem;color:var(--muted)">Progress is saved in this browser only. <button class="link" type="button" id="reset">Start again from zero</button></p>
     </section>
     <p class="note" style="text-align:center">Teacher? <button class="link" type="button" id="goTeacher">Open the class scoreboard</button></p>
   </div>`;
+  $("allUnits").onclick = () => { P.units = P.units.length === UNITS.length ? [] : UNITS.map(u => u[0]); save(); home(); };
   $("units").addEventListener("change", () => { P.units = UNITS.map(u => u[0]).filter(v => $("u" + v).checked); save(); home(); });
+  if (tease) $("teaser").onclick = () => { const t = $("tq"); if (t.classList.contains("ans")) home(); else { t.textContent = tease.a; t.classList.add("ans"); } };
   $("goCards").onclick = () => cards();
   $("goQuiz").onclick = () => quiz(pickQuiz(pool(), 10));
   $("goMiss").onclick = () => quiz(shuffle(BOOK.filter(x => P.miss.includes(x.a))).slice(0, 10));
