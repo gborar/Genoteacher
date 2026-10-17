@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Idiom Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&family=Noto+Color+Emoji&display=swap">
+<style>
+/* Layout: phone-first single column (max 640px): header, view area (home / flashcards / quiz / list), sticky bottom actions.
+   Same identity as the Idiom Rebus whiteboard game, single light theme on purpose. */
+:root {
+  --bg: #E9EEF5;
+  --card: #FFFFFF;
+  --ink: #14213D;
+  --muted: #56627A;
+  --line: #C9D2E0;
+  --hi: #FFC93C;
+  --hi-soft: #FFF1C7;
+  --ok: #1F9E89;
+  --bad: #E8513F;
+  --f-display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", Verdana, sans-serif;
+  --f-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 4px solid #1E7FD0; outline-offset: 3px; }
+.wrap { max-width: 640px; margin: 0 auto; padding-block: 16px 40px; display: grid; gap: 16px; }
+
+header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+header h1 { font-family: var(--f-display); font-weight: 400; font-size: 1.9rem; margin: 0; line-height: 1; cursor: pointer; }
+header h1 span { background: var(--hi); padding: 0 .2em; border-radius: 6px; }
+.chip { font-weight: 700; font-size: .8rem; padding: 3px 10px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); }
+
+.panel { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 6px 6px 0 var(--ink); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.5rem; margin: 0; line-height: 1.1; text-wrap: balance; }
+.label { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; color: var(--muted); margin: 0; }
+p { margin: 0; }
+
+.units { display: flex; flex-wrap: wrap; gap: 8px; }
+.units label { position: relative; }
+.units input { position: absolute; inset: 0; opacity: 0; }
+.units span { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 12px; font-weight: 700; font-size: .9rem; }
+.units input:checked + span { background: var(--ink); color: #fff; }
+.units input:focus-visible + span { outline: 4px solid #1E7FD0; outline-offset: 2px; }
+
+.meter { height: 14px; border-radius: 999px; background: var(--bg); border: 2px solid var(--ink); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+.stats { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.unitrows { display: grid; gap: 8px; }
+.unitrow { display: grid; grid-template-columns: 9.5em 1fr 3.6em; gap: 10px; align-items: center; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.unitrow .meter { height: 10px; border-width: 1.5px; }
+.unitrow b { text-align: right; }
+
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mode {
+  text-align: left; border: 3px solid var(--ink); border-radius: 18px; background: var(--card); padding: 14px;
+  box-shadow: 4px 4px 0 var(--ink); display: grid; gap: 4px; transition: transform .08s, box-shadow .08s;
+}
+.mode:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.mode strong { font-family: var(--f-display); font-weight: 400; font-size: 1.25rem; }
+.mode small { color: var(--muted); font-size: .85rem; line-height: 1.3; }
+.mode.primary { background: var(--hi); }
+.mode:disabled { opacity: .45; cursor: default; }
+
+.btn { min-height: 52px; border: 3px solid var(--ink); border-radius: 14px; background: var(--card); font-family: var(--f-display); font-size: 1.15rem; padding: 0 16px; box-shadow: 4px 4px 0 var(--ink); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.btn.primary { background: var(--hi); }
+.btn.good { background: var(--ok); color: #fff; }
+.btn.again { background: var(--bad); color: #fff; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 140px; }
+.link { background: none; border: 0; padding: 0; font-weight: 700; text-decoration: underline; color: var(--muted); }
+
+.emoji { font-family: var(--f-emoji); font-size: clamp(2.1rem, 10vw, 3.3rem); line-height: 1.2; text-align: center; letter-spacing: .06em; word-break: break-word; }
+.idiom { font-family: var(--f-display); font-weight: 400; font-size: clamp(1.6rem, 7vw, 2.3rem); text-align: center; line-height: 1.1; text-wrap: balance; margin: 0; }
+.prompt { text-align: center; font-weight: 700; font-size: 1.15rem; text-wrap: balance; }
+.flash { min-height: 300px; align-content: center; justify-items: center; text-align: center; cursor: pointer; }
+.back { display: grid; gap: 10px; text-align: left; justify-self: stretch; border-top: 3px dashed var(--line); padding-top: 12px; }
+.ex { font-style: italic; }
+.gap { display: inline-block; min-width: 4.5em; border-bottom: 4px solid var(--ink); background: var(--hi-soft); }
+
+.opts { display: grid; gap: 10px; }
+.opt { text-align: left; border: 3px solid var(--ink); border-radius: 14px; background: var(--card); padding: 12px 14px; font-weight: 700; display: flex; gap: 12px; align-items: center; min-height: 56px; }
+.opt b { font-family: var(--f-display); font-weight: 400; font-size: 1.25rem; min-width: 1em; }
+.opt.right { background: var(--ok); border-color: var(--ok); color: #fff; }
+.opt.wrong { background: var(--bad); border-color: var(--bad); color: #fff; }
+.opt:disabled { cursor: default; }
+.opt:disabled:not(.right):not(.wrong) { opacity: .55; }
+.type { display: flex; gap: 8px; flex-wrap: wrap; }
+.type input { flex: 1 1 220px; min-height: 52px; border: 3px solid var(--ink); border-radius: 14px; padding: 0 14px; font-weight: 700; min-width: 0; }
+.letters { font-family: var(--f-display); letter-spacing: .12em; text-align: center; font-size: 1.3rem; color: var(--muted); }
+.feedback { border-radius: 14px; padding: 12px 14px; font-weight: 700; display: grid; gap: 4px; }
+.feedback.ok { background: #DDF3EE; }
+.feedback.no { background: #FBE0DC; }
+.qhead { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); }
+.dots i.ok { background: var(--ok); border-color: var(--ok); }
+.dots i.no { background: var(--bad); border-color: var(--bad); }
+.dots i.now { background: var(--hi); }
+
+.big { font-family: var(--f-display); font-size: 3.4rem; text-align: center; line-height: 1; }
+.list { display: grid; gap: 0; }
+.item { padding: 12px 0; border-bottom: 2px solid var(--line); display: grid; gap: 4px; }
+.item:last-child { border-bottom: 0; }
+.item .t { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.item strong { font-size: 1.1rem; }
+.item .e { font-family: var(--f-emoji); font-size: 1.3rem; }
+.item .m { color: var(--muted); }
+.search { min-height: 48px; border: 3px solid var(--ink); border-radius: 14px; padding: 0 14px; width: 100%; }
+.box { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg); white-space: nowrap; }
+.box.m { background: var(--ok); color: #fff; }
+
+.wrap.wide { max-width: 1040px; }
+.field { display: grid; gap: 4px; flex: 1 1 180px; }
+.field input, .codebox, textarea { min-height: 48px; border: 3px solid var(--ink); border-radius: 14px; padding: 10px 14px; font-weight: 700; width: 100%; min-width: 0; background: var(--card); }
+.codebox { font-family: ui-monospace, Consolas, monospace; font-size: .95rem; word-break: break-all; user-select: all; background: var(--hi-soft); }
+textarea { min-height: 120px; font-family: ui-monospace, Consolas, monospace; font-weight: 400; font-size: .9rem; resize: vertical; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 10px 8px; border-bottom: 2px solid var(--line); text-align: left; white-space: nowrap; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num, th.num { text-align: right; }
+td .meter { width: 120px; display: inline-block; vertical-align: middle; height: 12px; }
+tr.top1 td:first-child, tr.top2 td:first-child, tr.top3 td:first-child { font-family: var(--f-display); font-size: 1.3rem; }
+.note { font-size: .85rem; color: var(--muted); }
+@media (max-width: 420px) { .modes { grid-template-columns: 1fr; } .unitrow { grid-template-columns: 7.5em 1fr 3.2em; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1 id="homeLink" title="Home"><span>Idiom</span> Trainer</h1>
+    <span class="chip">Burlington Skills 2</span>
+  </header>
+  <main id="view"></main>
+</div>
+
+<script>
+const IDIOMS = [
+  { u: "GS", c: "🏷️💸💸➡️💪🦵😱", a: "Cost an arm and a leg", k: "arm", m: "Be very expensive.", ex: "Those concert tickets cost an arm and a leg." },
+  { u: "GS", c: "🛋️🥔📺🍿😴", a: "Couch potato", k: "potato", m: "A lazy person who spends hours sitting and watching TV.", ex: "Don't be a couch potato: come for a walk!" },
+  { u: "GS", c: "📏🛣️🏃➡️🔮📅", a: "In the long run", k: "long", m: "Over a long period of time; in the future.", ex: "Studying a bit every day pays off in the long run." },
+  { u: "GS", c: "🦘⬆️🎟️✨😃", a: "Jump at the chance", k: "chance", m: "Accept an opportunity immediately and happily.", ex: "When they offered me the exchange, I jumped at the chance." },
+  { u: "GS", c: "👁️👀🔍🐕👶", a: "Keep an eye on", k: "eye", m: "Watch someone or something carefully.", ex: "Can you keep an eye on my bag for a minute?" },
+  { u: "GS", c: "✋➡️👄🍞💸🤏", a: "Live from hand to mouth", k: "mouth", m: "Have only just enough money to survive.", ex: "After he lost his job, the family lived from hand to mouth." },
+  { u: "GS", c: "🔚🤝🔚💶😓", a: "Make ends meet", k: "ends", m: "Have just enough money to pay for what you need.", ex: "Many students work part-time to make ends meet." },
+  { u: "GS", c: "🙋💳🛣️🚫👨‍👩‍👧", a: "Pay your own way", k: "way", m: "Pay for your own expenses without help.", ex: "She pays her own way through university." },
+  { u: "GS", c: "🦹🎭⭐👏👏", a: "Steal the show", k: "show", m: "Get all the attention and praise at an event.", ex: "The youngest actor stole the show." },
+  { u: "GS", c: "🚶🥚🥚🥚😬🤫", a: "Walk on eggshells", k: "eggshells", m: "Be very careful not to upset someone.", ex: "Everyone walks on eggshells when the coach is angry." },
+  { u: "GS", c: "💥📀🏅⏱️🏃", a: "Break a record", k: "record", m: "Do better than the best result ever.", ex: "She broke a record in the 100 metres." },
+  { u: "U1", c: "📋❤️🆚💀🚨", a: "A matter of life and death", k: "death", m: "Something extremely important or serious.", ex: "Relax, it's not a matter of life and death!" },
+  { u: "U1", c: "😂🙅⚠️😟", a: "Be no laughing matter", k: "laughing", m: "Be serious, not something to joke about.", ex: "Failing your exams is no laughing matter." },
+  { u: "U1", c: "🎯〰️💼⚖️😰", a: "Be on the line", k: "line", m: "Be at risk.", ex: "Her scholarship is on the line in this exam." },
+  { u: "U1", c: "✂️📏📖➡️📄👌", a: "Cut a long story short", k: "story", m: "Tell only the main point.", ex: "To cut a long story short, we missed the plane." },
+  { u: "U1", c: "🧠⬆️🪨💪✨", a: "Mind over matter", k: "mind", m: "Using willpower to overcome a physical problem.", ex: "Finishing a marathon is mind over matter." },
+  { u: "U1", c: "🤲🎁😐🤷🙏❌", a: "Take for granted", k: "granted", m: "Not value something because you always have it.", ex: "Don't take for granted the people who help you." },
+  { u: "U1", c: "😩➕🌧️➕🚌❌😫", a: "To make matters worse", k: "worse", m: "Making a bad situation even worse.", ex: "I got lost and, to make matters worse, my phone died." },
+  { u: "U1", c: "🐢🆚🐇🏁🏆😮", a: "Win against the odds", k: "odds", m: "Succeed when it seemed very unlikely.", ex: "The small team won against the odds." },
+  { u: "U1", c: "📍🏠↔️🌍✈️", a: "Near and far", k: "far", m: "Everywhere; from many places.", ex: "Fans came from near and far to see the concert." },
+  { u: "U1", c: "⏳⌛🔜✅", a: "A matter of time", k: "time", m: "Certain to happen sooner or later.", ex: "It's only a matter of time before they find out." },
+  { u: "U2", c: "🫵🗣️🏷️⚽🎸🎨📚", a: "You name it", k: "name", m: "Anything you can think of.", ex: "Football, music, art... you name it, she's done it." },
+  { u: "U2", c: "🙅💼🤷👀❌", a: "It's not my business", k: "business", m: "It doesn't concern me.", ex: "Who is she dating? It's not my business." },
+  { u: "U2", c: "🥳🍷🎶💃🎄", a: "Make merry", k: "merry", m: "Celebrate and have fun.", ex: "On Christmas Eve the whole village made merry." },
+  { u: "U2", c: "💳💳📉🕳️😰", a: "Get into debt", k: "debt", m: "Start owing money.", ex: "Some students get into debt to pay for university." },
+  { u: "U2", c: "👔📋❌🩳🩴😬", a: "Break the dress code", k: "dress", m: "Wear clothes that the rules don't allow.", ex: "He broke the dress code by wearing shorts." },
+  { u: "U2", c: "🤪🌀😵💥", a: "Go mad", k: "mad", m: "Become crazy or very angry.", ex: "My mum will go mad if I come home late." },
+  { u: "U3", c: "🗣️🙋🗳️👥✅", a: "Have a say", k: "say", m: "Have the right to give your opinion.", ex: "Students should have a say in school rules." },
+  { u: "U3", c: "✋🛑🚫⛔", a: "Put a stop to", k: "stop", m: "Make something end.", ex: "The council put a stop to the noise at night." },
+  { u: "U3", c: "🦶⬇️💥✋😠🚫", a: "Put your foot down", k: "foot", m: "Be firm and refuse to accept something.", ex: "Dad put his foot down: no phones at dinner." },
+  { u: "U3", c: "🧪📝✅❌💪", a: "Put to the test", k: "test", m: "Check how good or strong something is.", ex: "Our friendship was put to the test during the trip." },
+  { u: "U3", c: "🏃🚂💨❌🪫😩", a: "Run out of steam", k: "steam", m: "Lose energy or enthusiasm.", ex: "I ran out of steam after three hours of studying." },
+  { u: "U3", c: "🏃⏰❌⌛😱", a: "Run out of time", k: "time", m: "Have no time left.", ex: "I ran out of time and didn't finish the exam." },
+  { u: "U3", c: "🏃💶🤏👛😟", a: "Run short of money", k: "money", m: "Have very little money left.", ex: "We ran short of money at the end of the trip." },
+  { u: "U3", c: "🏃🐺🌲🎉🤪", a: "Run wild", k: "wild", m: "Behave without any control.", ex: "The kids ran wild at the party." },
+  { u: "U3", c: "🏃⏰💨🚌😰", a: "Run late", k: "late", m: "Be behind schedule.", ex: "Sorry, I'm running late!" },
+  { u: "U3", c: "🏃🛒📮💊✅", a: "Run an errand", k: "errand", m: "Go out to do a small job, like shopping.", ex: "Can you run an errand and buy some bread?" },
+  { u: "U3", c: "🔧❌➡️✅👍", a: "Put something right", k: "right", m: "Correct a mistake or problem.", ex: "I apologised and tried to put things right." },
+  { u: "U3", c: "🫸😓⏱️📈", a: "Put pressure on", k: "pressure", m: "Try to force someone to do something.", ex: "My parents put pressure on me to study medicine." },
+  { u: "U4", c: "💪🏃🎻😁✅", a: "As fit as a fiddle", k: "fiddle", m: "Very healthy.", ex: "My grandad is 80 and as fit as a fiddle." },
+  { u: "U4", c: "😨⚪👻🫥", a: "As pale as a ghost", k: "ghost", m: "Very pale.", ex: "You look as pale as a ghost. Are you OK?" },
+  { u: "U4", c: "🤢🤮🐶🛌🌡️", a: "As sick as a dog", k: "dog", m: "Very ill, especially vomiting.", ex: "I ate some bad fish and was as sick as a dog." },
+  { u: "U4", c: "🚪💀🛌🏥😵", a: "At death's door", k: "door", m: "Very seriously ill.", ex: "He was at death's door, but he recovered." },
+  { u: "U4", c: "🛌➡️🧍🦶🦶💪😃", a: "Back on your feet", k: "feet", m: "Healthy again after an illness.", ex: "After a week in bed, she's back on her feet." },
+  { u: "U4", c: "💊😖🍋👅😣", a: "A bitter pill to swallow", k: "pill", m: "Something unpleasant you have to accept.", ex: "Losing the final was a bitter pill to swallow." },
+  { u: "U4", c: "🤕➡️🩹📈🙂", a: "On the mend", k: "mend", m: "Getting better after an illness.", ex: "My leg is on the mend." },
+  { u: "U4", c: "🏃💨😮‍💨🍔🛋️", a: "Out of shape", k: "shape", m: "Not physically fit.", ex: "I'm so out of shape that I can't run for the bus." },
+  { u: "U4", c: "🚫❓🙅❌", a: "Out of the question", k: "question", m: "Impossible; not allowed.", ex: "Going out on a school night is out of the question." },
+  { u: "U4", c: "🔄🤢🤮🍲🪱", a: "Turn your stomach", k: "stomach", m: "Make you feel sick.", ex: "The smell of that food turns my stomach." },
+  { u: "U4", c: "👇🌦️🌡️🤒🛌", a: "Under the weather", k: "weather", m: "Feeling slightly ill.", ex: "I stayed at home because I was a bit under the weather." },
+  { u: "U4", c: "🖼️😁💪🍎✨", a: "Be the picture of health", k: "picture", m: "Look very healthy.", ex: "After the holiday she was the picture of health." },
+  { u: "U4", c: "🏥🔪🛌😷💉", a: "Go under the knife", k: "knife", m: "Have surgery.", ex: "He went under the knife to fix his knee." },
+  { u: "U4", c: "😬🧗⚡😰", a: "On edge", k: "edge", m: "Nervous and worried.", ex: "I was on edge all day waiting for my results." },
+  { u: "U4", c: "🦵🦵🔚😵🪫", a: "On your last legs", k: "legs", m: "Very tired, or about to stop working.", ex: "My old laptop is on its last legs." },
+  { u: "U4", c: "↩️📉🤒😟", a: "Take a turn for the worse", k: "worse", m: "Suddenly become worse.", ex: "Her health took a turn for the worse." },
+  { u: "U4", c: "🌙🕛👀📱🥱", a: "Stay up late", k: "late", m: "Go to bed late.", ex: "Don't stay up late before the exam." },
+  { u: "U4", c: "🌅⏰🐓🙋💪", a: "Early riser", k: "riser", m: "A person who gets up early.", ex: "My dad is an early riser: he's up at six." },
+  { u: "U5", c: "🎤💡🔦⭐📸", a: "Be in the limelight", k: "limelight", m: "Be the centre of public attention.", ex: "She loves being in the limelight." },
+  { u: "U5", c: "🎭🚪👷🎬🔧", a: "Behind the scenes", k: "scenes", m: "Out of public view; secretly.", ex: "A lot of work goes on behind the scenes." },
+  { u: "U5", c: "🎭🎬👊🦵🍀👏", a: "Break a leg", k: "leg", m: "Good luck (said before a performance).", ex: "Break a leg in the school play tonight!" },
+  { u: "U5", c: "🚶🛣️🛣️🛣️📈🏆", a: "Come a long way", k: "way", m: "Improve or progress a lot.", ex: "Your English has come a long way this year." },
+  { u: "U5", c: "😭😡😍📈🔥", a: "Emotions run high", k: "emotions", m: "People feel very strongly.", ex: "Emotions ran high during the final." },
+  { u: "U5", c: "🏃💯💪🔥🏁", a: "Go all out", k: "all", m: "Make the biggest effort possible.", ex: "The team went all out to win." },
+  { u: "U5", c: "👊⏰🌟💰🎉", a: "Hit the big time", k: "big", m: "Become very successful or famous.", ex: "The band hit the big time with their second album." },
+  { u: "U5", c: "🎬😱🪑⬛👀", a: "On the edge of your seat", k: "seat", m: "Very excited and nervous to see what happens.", ex: "The film kept me on the edge of my seat." },
+  { u: "U5", c: "🌍➡️🚀🪐😋", a: "Out of this world", k: "world", m: "Extraordinary; fantastic.", ex: "The chocolate cake was out of this world." },
+  { u: "U5", c: "🏃🎪👑📋🎬", a: "Run the show", k: "show", m: "Be in control; be the boss.", ex: "My older sister runs the show at home." },
+  { u: "U5", c: "🎤🎶❤️💥🎵", a: "Sing your heart out", k: "heart", m: "Sing with all your energy and emotion.", ex: "She sang her heart out at the concert." },
+  { u: "U5", c: "🎭⏩🎬💪🙌", a: "The show must go on", k: "must", m: "Continue even if there are problems.", ex: "The singer was ill, but the show must go on." },
+  { u: "U5", c: "🎪🚌🛣️▶️🎉", a: "Get the show on the road", k: "road", m: "Start an activity or project.", ex: "Everyone's here, so let's get the show on the road." },
+  { u: "U5", c: "↩️✏️📋🗑️🔁", a: "Go back to the drawing board", k: "drawing", m: "Start again because a plan failed.", ex: "The idea didn't work, so we went back to the drawing board." },
+  { u: "U5", c: "🎬🏞️🎭📍✨", a: "Set the scene", k: "scene", m: "Prepare the situation for something.", ex: "The first chapter sets the scene for the story." },
+  { u: "U5", c: "🎟️💰🎬🎯🔥", a: "A box-office hit", k: "hit", m: "A very successful film or show.", ex: "The film was a box-office hit." },
+  { u: "U6", c: "☀️🌅⏰😃✨", a: "Bright and early", k: "early", m: "Very early in the morning.", ex: "We left bright and early to avoid the traffic." },
+  { u: "U6", c: "➡️🚪⬅️🔍📋", a: "The ins and outs", k: "ins", m: "All the details of something.", ex: "She knows the ins and outs of the job." },
+  { u: "U6", c: "⏰❗🔜❌♾️", a: "Now or never", k: "never", m: "This is the last chance.", ex: "Ask her to dance: it's now or never!" },
+  { u: "U6", c: "☮️🤫😌🌳📖", a: "Peace and quiet", k: "quiet", m: "A calm, silent situation.", ex: "I go to the library for some peace and quiet." },
+  { u: "U6", c: "🧪✅✅👍🔁", a: "Tried and tested", k: "tested", m: "Proved to work well.", ex: "This is a tried and tested method." },
+  { u: "U6", c: "🍷🍽️🥂😋💼", a: "Wine and dine", k: "dine", m: "Entertain someone with good food and drink.", ex: "The company wined and dined its new clients." },
+  { u: "U6", c: "1️⃣🔁👶➡️👴🌟", a: "Once in a lifetime", k: "lifetime", m: "Happening only once in your life.", ex: "Meeting my idol was a chance that comes once in a lifetime." },
+  { u: "U6", c: "🖍️⚪🧀🟡↔️🙅", a: "Chalk and cheese", k: "cheese", m: "Completely different.", ex: "My brother and I are like chalk and cheese." },
+  { u: "U6", c: "✅❌📋👍👎", a: "Dos and don'ts", k: "Dos", m: "Rules about what you should and shouldn't do.", ex: "Here are the dos and don'ts of a job interview." },
+  { u: "U6", c: "⚖️🟩✅🏆🤝", a: "Fair and square", k: "square", m: "Honestly, without cheating.", ex: "We won the match fair and square." },
+  { u: "U6", c: "🔨🏆❓💔💥", a: "Make or break", k: "break", m: "Decide whether something succeeds or fails.", ex: "This interview is make or break for my career." },
+  { u: "U6", c: "🏠🛡️😊🙌✅", a: "Safe and sound", k: "sound", m: "Safe and not hurt.", ex: "They arrived home safe and sound." },
+  { u: "U6", c: "💯❓0️⃣🎲", a: "All or nothing", k: "nothing", m: "Everything or nothing at all; no middle way.", ex: "For him, it's all or nothing." },
+  { u: "U6", c: "⬅️➡️⬅️➡️🏓", a: "Back and forth", k: "forth", m: "From one side to another, without a decision.", ex: "We argued back and forth for hours." },
+  { u: "U6", c: "👥⚽🤝💪", a: "Team player", k: "team", m: "A person who works well with others.", ex: "We're looking for a team player." },
+  { u: "U6", c: "🔧🌍✨➡️🌱", a: "Make a difference", k: "difference", m: "Have a good effect on a situation.", ex: "Volunteers really make a difference." },
+  { u: "U6", c: "💼💶🏠🍞", a: "Earn a living", k: "living", m: "Earn money to pay for your life.", ex: "She earns a living as a photographer." },
+  { u: "U6", c: "💡🔛📴🔁", a: "On and off", k: "off", m: "Sometimes; not continuously.", ex: "It rained on and off all day." },
+  { u: "X", c: "👊💥🧊🧊➡️🤝😊", a: "Break the ice", k: "ice", m: "Say or do something to make people feel relaxed when they first meet.", ex: "Our teacher told a joke to break the ice on the first day." },
+  { u: "X", c: "🌧️☔🐱🐈🐶🐕⬇️", a: "Raining cats and dogs", k: "cats", m: "Raining very heavily.", ex: "Take an umbrella, it's raining cats and dogs." },
+  { u: "X", c: "🧩➕🎂➡️😎👌", a: "A piece of cake", m: "Something very easy to do.", ex: "The listening test was a piece of cake." },
+  { u: "X", c: "1️⃣⏱️🔵🌕🔭📅", a: "Once in a blue moon", k: "moon", m: "Very rarely.", ex: "My cousin only calls me once in a blue moon." },
+  { u: "X", c: "🫙🫘🫘💦😮🤫❌", a: "Spill the beans", k: "beans", m: "Reveal a secret.", ex: "Come on, spill the beans: who sent you the flowers?" },
+  { u: "X", c: "👜🐈➡️💨🤫😱", a: "Let the cat out of the bag", k: "cat", m: "Reveal a secret by accident.", ex: "She let the cat out of the bag about the surprise party." },
+  { u: "X", c: "👊📚📚✏️🤓", a: "Hit the books", m: "Start studying hard.", ex: "Exams start on Monday, so I need to hit the books." },
+  { u: "X", c: "😮🦷🍔🍔🍔🍔🤯", a: "Bite off more than you can chew", k: "chew", m: "Try to do more than you are able to manage.", ex: "Don't bite off more than you can chew: one after-school job is enough." },
+  { u: "X", c: "1️⃣🪨➡️🐦🐦✌️", a: "Kill two birds with one stone", m: "Achieve two things with one action.", ex: "Cycling to school kills two birds with one stone: exercise and no bus fare." },
+  { u: "X", c: "🎾➡️🫵🏟️⏳🤔", a: "The ball is in your court", m: "It's your turn to decide or act.", ex: "I've made my offer; the ball is in your court now." },
+  { u: "X", c: "🥱👊🛏️💤🌙", a: "Hit the sack", m: "Go to bed.", ex: "I'm exhausted, I'm going to hit the sack." },
+  { u: "X", c: "🦋🦋🦋😰🤢🎤", a: "Butterflies in your stomach", m: "A nervous feeling before something important.", ex: "I always get butterflies in my stomach before a presentation." },
+  { u: "X", c: "⏰🪽🕊️💨📆📆", a: "Time flies", m: "Time passes very quickly.", ex: "Time flies when you're having fun." },
+  { u: "X", c: "😇🙏🥸🎭➡️🎁😃", a: "A blessing in disguise", m: "Something that seems bad but turns out to be good.", ex: "Missing the bus was a blessing in disguise: I met my best friend at the stop." },
+  { u: "X", c: "😁☁️9️⃣☁️🥳", a: "On cloud nine", m: "Extremely happy.", ex: "She was on cloud nine after passing her driving test." },
+  { u: "X", c: "🐷🪽✈️☁️❌🙅", a: "When pigs fly", k: "pigs", m: "Never; it will not happen.", ex: "My brother will tidy his room when pigs fly." },
+  { u: "X", c: "😭🥛💦🤷⏪❌", a: "Cry over spilt milk", m: "Be upset about something that cannot be changed.", ex: "The exam is over; there's no use crying over spilt milk." },
+  { u: "X", c: "🐘🛋️👥🤐😬", a: "The elephant in the room", m: "An obvious problem nobody wants to talk about.", ex: "Climate change was the elephant in the room at the meeting." },
+  { u: "X", c: "🥶🦶🦶➡️💍😬🏃💨", a: "Get cold feet", k: "feet", m: "Become too nervous to do something you planned.", ex: "He got cold feet and didn't sing at the talent show." },
+  { u: "X", c: "✋🛑🐎🐎💨⏳", a: "Hold your horses", m: "Wait; don't rush.", ex: "Hold your horses! Let me finish explaining." },
+  { u: "X", c: "🐕🗣️🌳❌🐈🌲✅", a: "Barking up the wrong tree", k: "tree", m: "Looking for a solution or blaming someone in the wrong place.", ex: "If you think I took your phone, you're barking up the wrong tree." },
+  { u: "X", c: "🌧️☁️🥈✨➡️🌈🙂", a: "Every cloud has a silver lining", m: "Every bad situation has something good in it.", ex: "I lost my job, but every cloud has a silver lining: now I can study." },
+  { u: "X", c: "🔥🛢️🕛🌙📚🥱", a: "Burn the midnight oil", m: "Work or study late into the night.", ex: "She burned the midnight oil to finish her project." },
+  { u: "X", c: "😳🎵🎺➡️😡👨‍⚖️", a: "Face the music", m: "Accept the consequences of what you did.", ex: "He broke the window, so now he has to face the music." },
+  { u: "X", c: "🐑🐑⬛🐑🐑👀", a: "The black sheep", m: "The member of a group who is different or a source of shame.", ex: "My uncle is the black sheep of the family." },
+  { u: "X", c: "🍎👁️👵❤️👶", a: "The apple of my eye", m: "A person you love very much.", ex: "Her granddaughter is the apple of her eye." },
+  { u: "X", c: "🧍🛁♨️🔥😰", a: "In hot water", m: "In trouble.", ex: "You'll be in hot water if you miss the exam." },
+  { u: "X", c: "🦹💰⚡➡️🎤👏😠", a: "Steal someone's thunder", k: "thunder", m: "Take attention or praise that someone else deserved.", ex: "He stole my thunder by announcing my idea first." },
+  { u: "X", c: "🥇🌍➕🌏😎", a: "The best of both worlds", m: "The advantages of two different things at the same time.", ex: "Living near the beach and the city gives you the best of both worlds." },
+  { u: "X", c: "🏃🛣️➕1️⃣🏁💪", a: "Go the extra mile", m: "Make more effort than is expected.", ex: "Our coach always goes the extra mile for the team." },
+  { u: "X", c: "🧑‍🎓🧠☁️☁️💭🙄", a: "Head in the clouds", m: "Not paying attention to what is happening; daydreaming.", ex: "Pay attention! You always have your head in the clouds." },
+  { u: "X", c: "🐄⤴️🌕🎉😆", a: "Over the moon", k: "moon", m: "Extremely happy and pleased.", ex: "I was over the moon when I got my exam results." },
+  { u: "X", c: "📖👀➡️🧠❤️🔁", a: "Learn by heart", k: "heart", m: "Memorise something so you can repeat it exactly.", ex: "Actors have to learn by heart all their lines." },
+  { u: "X", c: "🤞🤞🙏🍀📨", a: "Keep your fingers crossed", m: "Hope that something good will happen.", ex: "Keep your fingers crossed for my university application!" },
+  { u: "X", c: "🗣️💬😈🚪👋😳", a: "Speak of the devil", k: "devil", m: "Said when the person you are talking about suddenly appears.", ex: "Speak of the devil! We were just talking about you." },
+  { u: "X", c: "1️⃣💧➡️🌊🌊🌊🤏", a: "A drop in the ocean", m: "A very small amount compared with what is needed.", ex: "Recycling one bottle is a drop in the ocean, but it's a start." },
+  { u: "X", c: "🔨➡️📌🎯✅💯", a: "Hit the nail on the head", m: "Describe exactly what is causing a problem; be exactly right.", ex: "You hit the nail on the head: the real problem is lack of sleep." },
+  { u: "X", c: "🔵🌌➡️💥📞😲", a: "Out of the blue", m: "Suddenly and unexpectedly.", ex: "My old friend called me out of the blue last night." },
+  { u: "X", c: "🕳️⛏️🪓➡️🤝🕊️", a: "Bury the hatchet", m: "Stop arguing and become friends again.", ex: "After years of arguing, the two brothers buried the hatchet." }
+];
+
+const IRR = { buried: "bury", ran: "run", stole: "steal", broke: "break", went: "go", took: "take", sang: "sing", won: "win", kept: "keep", made: "make", came: "come", got: "get", is: "be", are: "be", was: "be", were: "be", "'s": "be", wined: "wine", dined: "dine", runs: "run", running: "run" };
+const POSS = new Set(["your", "my", "his", "her", "their", "its", "our", "one's"]);
+function norm(w) { w = w.toLowerCase().replace(/[^a-z']/g, ""); return IRR[w] || w; }
+function same(aw, tw) {
+  aw = aw.toLowerCase();
+  if (POSS.has(aw)) return POSS.has(tw);
+  if (aw.startsWith("some")) return true;
+  aw = norm(aw);
+  if (aw === tw) return true;
+  if (aw.length <= 3) return tw.startsWith(aw) && tw.length <= aw.length + 3;
+  return aw.slice(0, 4) === tw.slice(0, 4);
+}
+function gapSpan(a, ex) {
+  let aw = a.split(" ");
+  if (aw[0].toLowerCase() === "be" && aw.length > 2) aw = aw.slice(1);
+  const re = /[A-Za-z'’-]+/g; const toks = []; let m;
+  while ((m = re.exec(ex))) toks.push({ w: norm(m[0].replace("’", "'")), s: m.index, e: m.index + m[0].length });
+  for (let i = 0; i < toks.length; i++) {
+    let ok = true;
+    for (let j = 0; j < aw.length; j++) { if (!toks[i + j] || !same(aw[j], toks[i + j].w)) { ok = false; break; } }
+    if (ok) return [toks[i].s, toks[i + aw.length - 1].e];
+  }
+  return null;
+}
+
+
+const UNITS = [["GS", "Getting Started"], ["U1", "Unit 1"], ["U2", "Unit 2"], ["U3", "Unit 3"], ["U4", "Unit 4"], ["U5", "Unit 5"], ["U6", "Unit 6"]];
+const UNIT_NAME = Object.fromEntries(UNITS);
+const BOOK = IDIOMS.filter(x => x.u !== "X");
+const MASTER = 3;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* progress lives only in this browser */
+const KEY = "idiomTrainer.v1";
+let P = { units: UNITS.map(u => u[0]), box: {}, miss: [], name: "", group: "", quizzes: 0, correct: 0 };
+try { const raw = localStorage.getItem(KEY); if (raw) P = Object.assign(P, JSON.parse(raw)); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
+const box = it => P.box[it.a] || 0;
+const setBox = (it, b) => { P.box[it.a] = Math.max(0, Math.min(MASTER, b)); save(); };
+const pool = () => BOOK.filter(x => P.units.includes(x.u));
+const mastered = list => list.filter(x => box(x) >= MASTER).length;
+
+/* progress codes: students send them to the teacher, the teacher pastes them into the scoreboard */
+const SALT = "burlington-skills-2";
+function hash(str) { let h = 2166136261; for (const ch of str + SALT) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(36).padStart(7, "0").slice(-6); }
+const b64 = str => btoa(String.fromCharCode(...new TextEncoder().encode(str))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64 = str => new TextDecoder().decode(Uint8Array.from(atob(str.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+function makeCode() {
+  const body = b64(JSON.stringify({ n: P.name, g: P.group, u: UNITS.map(([v]) => mastered(BOOK.filter(x => x.u === v))), q: P.quizzes, c: P.correct, t: Math.floor(Date.now() / 60000) }));
+  return `IDT1.${body}.${hash(body)}`;
+}
+function readCodes(text) {
+  const out = [];
+  for (const m of text.matchAll(/IDT1\.([A-Za-z0-9_-]+)\.([a-z0-9]{6})/g)) {
+    if (hash(m[1]) !== m[2]) continue;
+    try { const d = JSON.parse(unb64(m[1])); if (d && typeof d.n === "string" && Array.isArray(d.u)) out.push(d); } catch (e) {}
+  }
+  return out;
+}
+
+function norm(s) {
+  return s.toLowerCase().replace(/[’']/g, "'").replace(/\b(my|his|her|their|its|our|one's)\b/g, "your")
+    .replace(/[^a-z' ]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/* ---------- home ---------- */
+function home() {
+  document.querySelector(".wrap").classList.remove("wide");
+  const p = pool();
+  const unitBoxes = UNITS.map(([v, name]) => `<label><input type="checkbox" id="u${v}" value="${v}" ${P.units.includes(v) ? "checked" : ""}><span>${name}</span></label>`).join("");
+  const rows = UNITS.map(([v, name]) => { const l = BOOK.filter(x => x.u === v), m = mastered(l);
+    return `<div class="unitrow"><span>${name}</span><div class="meter"><i style="width:${l.length ? m / l.length * 100 : 0}%"></i></div><b>${m}/${l.length}</b></div>`; }).join("");
+  const m = mastered(p);
+  $("view").innerHTML = `
+  <div style="display:grid;gap:16px">
+    <section class="panel">
+      <h2>Learn the idioms before the big game</h2>
+      <p>Choose your units, study the cards, then test yourself. An idiom is <b>mastered</b> when you get it right ${MASTER} times in a row.</p>
+      <p class="label">Units</p>
+      <div class="units" id="units">${unitBoxes}</div>
+      <div class="stats"><span>${p.length} idioms selected</span><span>${m} mastered</span></div>
+      <div class="meter"><i style="width:${p.length ? m / p.length * 100 : 0}%"></i></div>
+    </section>
+    <section class="panel">
+      <p class="label">Class scoreboard</p>
+      ${P.name ? `<p>You are <b>${esc(P.name)}</b>${P.group ? ` (${esc(P.group)})` : ""}. When you finish studying, send your progress code to your teacher. <button class="link" type="button" id="rename">Change name</button></p>
+        <button class="btn primary" type="button" id="send">Send my progress</button>`
+      : `<p>Write your name so your teacher can put you on the class scoreboard.</p>
+        <form class="row" id="nameForm"><div class="field"><label class="label" for="nm">Name and surname</label><input id="nm" maxlength="40" autocomplete="name" required></div>
+        <div class="field" style="flex:0 1 120px"><label class="label" for="gr">Group</label><input id="gr" maxlength="10" placeholder="2º B"></div>
+        <button class="btn primary" style="align-self:end">Save</button></form>`}
+    </section>
+    <section class="modes">
+      <button class="mode" type="button" id="goCards" ${p.length ? "" : "disabled"}><strong>1 · Flashcards</strong><small>See each idiom with its emojis, meaning and example.</small></button>
+      <button class="mode primary" type="button" id="goQuiz" ${p.length ? "" : "disabled"}><strong>2 · Quiz</strong><small>10 questions. The ones you don't know yet come first.</small></button>
+      <button class="mode" type="button" id="goMiss" ${P.miss.length ? "" : "disabled"}><strong>Mistakes (${P.miss.length})</strong><small>A quiz with only the idioms you got wrong.</small></button>
+      <button class="mode" type="button" id="goList"><strong>Word list</strong><small>All the idioms of your units, with search.</small></button>
+    </section>
+    <section class="panel">
+      <p class="label">Your progress by unit</p>
+      <div class="unitrows">${rows}</div>
+      <p style="font-size:.85rem;color:var(--muted)">Progress is saved in this browser only. <button class="link" type="button" id="reset">Start again from zero</button></p>
+    </section>
+    <p class="note" style="text-align:center">Teacher? <button class="link" type="button" id="goTeacher">Open the class scoreboard</button></p>
+  </div>`;
+  $("units").addEventListener("change", () => { P.units = UNITS.map(u => u[0]).filter(v => $("u" + v).checked); save(); home(); });
+  $("goCards").onclick = () => cards();
+  $("goQuiz").onclick = () => quiz(pickQuiz(pool(), 10));
+  $("goMiss").onclick = () => quiz(shuffle(BOOK.filter(x => P.miss.includes(x.a))).slice(0, 10));
+  $("goList").onclick = () => list();
+  $("goTeacher").onclick = () => teacher();
+  if (P.name) { $("send").onclick = send; $("rename").onclick = () => { P.name = ""; save(); home(); }; }
+  else $("nameForm").onsubmit = e => { e.preventDefault(); const n = $("nm").value.trim(); if (!n) return; P.name = n; P.group = $("gr").value.trim(); save(); home(); };
+  $("reset").onclick = e => {
+    if (e.target.dataset.sure) { P.box = {}; P.miss = []; P.quizzes = 0; P.correct = 0; save(); home(); }
+    else { e.target.dataset.sure = "1"; e.target.textContent = "Tap again to delete your progress"; }
+  };
+  scrollTo(0, 0);
+}
+
+/* ---------- flashcards ---------- */
+function cards() {
+  const deck = shuffle(pool()).sort((a, b) => box(a) - box(b));
+  let i = 0, open = false;
+  function draw() {
+    if (i >= deck.length) { $("view").innerHTML = `<section class="panel" style="text-align:center"><h2>You've seen all ${deck.length} cards</h2><p>Now test yourself with the quiz.</p><div class="row"><button class="btn primary" id="q">Start the quiz</button><button class="btn" id="h">Home</button></div></section>`;
+      $("q").onclick = () => quiz(pickQuiz(pool(), 10)); $("h").onclick = home; return; }
+    const it = deck[i];
+    $("view").innerHTML = `
+    <div style="display:grid;gap:14px">
+      <div class="qhead"><span>Card ${i + 1} of ${deck.length}</span><span class="chip">${UNIT_NAME[it.u]}</span></div>
+      <section class="panel flash" id="card" role="button" tabindex="0" aria-label="Show meaning">
+        <div class="emoji">${it.c}</div>
+        <p class="idiom">${esc(it.a)}</p>
+        ${open ? `<div class="back"><div><p class="label">Meaning</p><p>${esc(it.m)}</p></div><div><p class="label">Example</p><p class="ex">${esc(it.ex)}</p></div></div>`
+               : `<p style="color:var(--muted);font-weight:700">Tap the card to see the meaning</p>`}
+      </section>
+      <div class="row">${open ? `<button class="btn again" id="again">Not yet</button><button class="btn good" id="got">I know it</button>` : `<button class="btn primary" id="flip">Show meaning</button>`}</div>
+      <button class="link" type="button" id="h">Back to home</button>
+    </div>`;
+    const flip = () => { open = true; draw(); };
+    $("card").onclick = () => { if (!open) flip(); };
+    $("card").onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && !open) { e.preventDefault(); flip(); } };
+    if (open) {
+      $("again").onclick = () => { setBox(it, 0); i++; open = false; draw(); };
+      $("got").onclick = () => { if (box(it) === 0) setBox(it, 1); i++; open = false; draw(); };
+    } else $("flip").onclick = flip;
+    $("h").onclick = home;
+  }
+  draw(); scrollTo(0, 0);
+}
+
+/* ---------- quiz ---------- */
+function pickQuiz(p, n) {
+  return shuffle(p).sort((a, b) => box(a) - box(b)).slice(0, n);
+}
+const TYPES = ["emoji", "meaning", "gap", "reverse", "type"];
+function makeQ(it, k) {
+  const type = it.forceType || TYPES[(k + Math.floor(Math.random() * TYPES.length)) % TYPES.length];
+  const others = shuffle(BOOK.filter(x => x.a !== it.a && x.m !== it.m)).slice(0, 3);
+  const opts = shuffle([it, ...others]);
+  return { it, type, opts };
+}
+function quiz(items) {
+  if (!items.length) return home();
+  const qs = items.map((it, k) => makeQ(it, k));
+  let i = 0, results = [];
+  function draw(answered, chosen, okFlag) {
+    const q = qs[i], it = q.it;
+    const span = gapSpan(it.a, it.ex);
+    const gapped = span ? `${esc(it.ex.slice(0, span[0]))}<span class="gap">&nbsp;</span>${esc(it.ex.slice(span[1]))}` : esc(it.ex);
+    let ask;
+    if (q.type === "emoji") ask = `<p class="prompt">Which idiom do the emojis show?</p><div class="emoji">${it.c}</div>`;
+    else if (q.type === "meaning") ask = `<p class="prompt">Which idiom means…</p><p class="idiom" style="font-family:var(--f-body);font-weight:700;font-size:1.35rem">“${esc(it.m)}”</p>`;
+    else if (q.type === "gap") ask = `<p class="prompt">Which idiom completes the sentence?</p><p style="font-size:1.25rem;text-align:center;font-weight:700">${gapped}</p>`;
+    else if (q.type === "reverse") ask = `<p class="prompt">What does this idiom mean?</p><p class="idiom">${esc(it.a)}</p>`;
+    else ask = `<p class="prompt">Write the idiom</p><div class="emoji">${it.c}</div><p class="letters">${it.a.split(" ").map(w => w[0].toUpperCase() + "_".repeat(Math.max(0, [...w].filter(c => /\p{L}/u.test(c)).length - 1))).join("  ")}</p><p style="text-align:center;color:var(--muted)">${esc(it.m)}</p>`;
+
+    let answer;
+    if (q.type === "type") {
+      answer = `<form class="type" id="tf"><input id="ti" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the idiom" ${answered ? "disabled" : ""} value="${answered ? esc(chosen) : ""}"><button class="btn primary" ${answered ? "disabled" : ""}>Check</button></form>`;
+    } else {
+      answer = `<div class="opts">${q.opts.map((o, n) => {
+        const text = q.type === "reverse" ? o.m : o.a;
+        let cls = "";
+        if (answered && o.a === it.a) cls = "right"; else if (answered && chosen === o.a) cls = "wrong";
+        return `<button class="opt ${cls}" type="button" data-o="${n}" ${answered ? "disabled" : ""}><b>${"ABCD"[n]}</b><span>${esc(text)}</span></button>`; }).join("")}</div>`;
+    }
+    const fb = answered ? `<div class="feedback ${okFlag ? "ok" : "no"}"><span>${okFlag ? "Correct!" : `Not quite. The answer is: ${esc(it.a)}`}</span><span style="font-weight:400">${esc(it.m)}</span><span class="ex" style="font-weight:400">${esc(it.ex)}</span></div>
+      <button class="btn primary" id="next">${i === qs.length - 1 ? "See my score" : "Next question"}</button>` : "";
+    const dots = qs.map((_, n) => `<i class="${n < results.length ? (results[n] ? "ok" : "no") : n === i ? "now" : ""}"></i>`).join("");
+    $("view").innerHTML = `
+    <div style="display:grid;gap:14px">
+      <div class="qhead"><span>Question ${i + 1} of ${qs.length}</span><span class="dots">${dots}</span></div>
+      <section class="panel">${ask}${answer}${fb}</section>
+      <button class="link" type="button" id="h">Stop and go home</button>
+    </div>`;
+    $("h").onclick = home;
+    if (answered) { $("next").onclick = () => { i++; i < qs.length ? draw(false) : end(); }; $("next").focus(); return; }
+    if (q.type === "type") {
+      $("ti").focus();
+      $("tf").onsubmit = e => { e.preventDefault(); const v = $("ti").value; if (!v.trim()) return; mark(norm(v) === norm(it.a), v); };
+    } else {
+      document.querySelectorAll("[data-o]").forEach(b => b.onclick = () => { const o = q.opts[+b.dataset.o]; mark(o.a === it.a, o.a); });
+    }
+    function mark(ok, chosen) {
+      results.push(ok);
+      if (ok) P.correct++;
+      if (ok) { setBox(it, box(it) + 1); P.miss = P.miss.filter(a => a !== it.a); }
+      else { setBox(it, 0); if (!P.miss.includes(it.a)) P.miss.push(it.a); }
+      save(); draw(true, chosen, ok);
+    }
+  }
+  function end() {
+    P.quizzes++; save();
+    const right = results.filter(Boolean).length;
+    const wrong = qs.filter((q, n) => !results[n]).map(q => q.it);
+    const msg = right === qs.length ? "Perfect score!" : right >= qs.length * .7 ? "Great work!" : right >= qs.length * .4 ? "Keep going!" : "Study the cards and try again.";
+    $("view").innerHTML = `
+    <section class="panel" style="text-align:center">
+      <p class="label">Your score</p>
+      <p class="big">${right}/${qs.length}</p>
+      <h2>${msg}</h2>
+      ${wrong.length ? `<div class="list" style="text-align:left"><p class="label">Review these</p>${wrong.map(it => `<div class="item"><div class="t"><strong>${esc(it.a)}</strong><span class="e">${it.c}</span></div><span class="m">${esc(it.m)}</span></div>`).join("")}</div>` : ""}
+      <div class="row">${wrong.length ? `<button class="btn primary" id="rm">Practise my mistakes</button>` : ""}<button class="btn ${wrong.length ? "" : "primary"}" id="again">New quiz</button><button class="btn" id="h">Home</button></div>
+    </section>`;
+    if (wrong.length) $("rm").onclick = () => quiz(shuffle(wrong));
+    $("again").onclick = () => quiz(pickQuiz(pool(), 10));
+    $("h").onclick = home;
+    scrollTo(0, 0);
+  }
+  draw(false); scrollTo(0, 0);
+}
+
+/* ---------- word list ---------- */
+function list() {
+  const p = pool();
+  $("view").innerHTML = `
+  <section class="panel">
+    <h2>Word list</h2>
+    <input class="search" id="q" type="search" placeholder="Search an idiom or a word in the meaning" aria-label="Search">
+    <div class="list" id="items"></div>
+    <button class="link" type="button" id="h">Back to home</button>
+  </section>`;
+  const render = () => {
+    const t = norm($("q").value);
+    const rows = UNITS.filter(([v]) => P.units.includes(v)).map(([v, name]) => {
+      const l = p.filter(x => x.u === v && (!t || norm(x.a + " " + x.m).includes(t)));
+      if (!l.length) return "";
+      return `<p class="label" style="margin-top:14px">${name}</p>` + l.map(it => `<div class="item"><div class="t"><strong>${esc(it.a)}</strong><span class="box ${box(it) >= MASTER ? "m" : ""}">${box(it) >= MASTER ? "Mastered" : box(it) + "/" + MASTER}</span></div><span class="e">${it.c}</span><span class="m">${esc(it.m)}</span><span class="ex">${esc(it.ex)}</span></div>`).join("");
+    }).join("");
+    $("items").innerHTML = rows || `<p style="color:var(--muted)">No idioms match your search.</p>`;
+  };
+  $("q").oninput = render; render();
+  $("h").onclick = home;
+  scrollTo(0, 0);
+}
+
+/* ---------- send progress ---------- */
+function send() {
+  const code = makeCode(), total = mastered(BOOK);
+  $("view").innerHTML = `
+  <section class="panel">
+    <h2>Your progress code</h2>
+    <p><b>${esc(P.name)}</b>${P.group ? ` · ${esc(P.group)}` : ""} · ${total}/${BOOK.length} idioms mastered · ${P.quizzes} quizzes</p>
+    <div class="codebox" id="code">${code}</div>
+    <button class="btn primary" type="button" id="copy">Copy the code</button>
+    <p id="copied" class="note" aria-live="polite"></p>
+    <p>Paste it where your teacher tells you: Google Classroom, a form or an email. The code changes every time you study, so send a new one before the game.</p>
+    <button class="link" type="button" id="h">Back to home</button>
+  </section>`;
+  $("copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(code); $("copied").textContent = "Copied. Now paste it for your teacher."; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($("code")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $("copied").textContent = "The code is selected: copy it with your device's Copy option."; }
+  };
+  $("h").onclick = home; scrollTo(0, 0);
+}
+
+/* ---------- teacher scoreboard (kept in this browser) ---------- */
+const TKEY = "idiomTrainer.class.v1";
+function loadClass() { try { return JSON.parse(localStorage.getItem(TKEY) || "{}"); } catch (e) { return {}; } }
+function saveClass(c) { try { localStorage.setItem(TKEY, JSON.stringify(c)); } catch (e) {} }
+function teacher(filter) {
+  document.querySelector(".wrap").classList.add("wide");
+  const cls = loadClass();
+  const rows = Object.values(cls).filter(r => !filter || r.g === filter)
+    .map(r => ({ ...r, total: r.u.reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.total - a.total || b.c - a.c || a.n.localeCompare(b.n));
+  const groups = [...new Set(Object.values(cls).map(r => r.g).filter(Boolean))].sort();
+  const when = t => new Date(t * 60000).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  $("view").innerHTML = `
+  <div style="display:grid;gap:16px">
+    <section class="panel">
+      <h2>Class scoreboard</h2>
+      <p>Ask each student to tap <b>Send my progress</b> and send you the code (for example as a Classroom private comment or a Google Form answer). Paste the codes here: one or many at a time, even a whole column copied from a spreadsheet. A newer code from the same student replaces the old one.</p>
+      <label class="label" for="codes">Progress codes</label>
+      <textarea id="codes" placeholder="IDT1.…"></textarea>
+      <div class="row"><button class="btn primary" type="button" id="add">Add to the scoreboard</button></div>
+      <p id="msg" class="note" aria-live="polite"></p>
+    </section>
+    <section class="panel">
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <p class="label">${rows.length} student${rows.length === 1 ? "" : "s"} · ${BOOK.length} idioms in the book</p>
+        ${groups.length > 1 ? `<div class="units" id="grp"><label><input type="radio" name="g" value="" ${!filter ? "checked" : ""}><span>All</span></label>${groups.map(g => `<label><input type="radio" name="g" value="${esc(g)}" ${filter === g ? "checked" : ""}><span>${esc(g)}</span></label>`).join("")}</div>` : ""}
+      </div>
+      ${rows.length ? `<div class="scroll"><table>
+        <thead><tr><th>#</th><th>Student</th><th>Group</th><th>Mastered</th>${UNITS.map(([v]) => `<th class="num">${v === "GS" ? "GS" : v.replace("U", "U")}</th>`).join("")}<th class="num">Quizzes</th><th class="num">Right answers</th><th>Updated</th></tr></thead>
+        <tbody>${rows.map((r, n) => `<tr class="top${n + 1}"><td>${n + 1}</td><td><b>${esc(r.n)}</b></td><td>${esc(r.g || "")}</td>
+          <td><span class="meter"><i style="width:${r.total / BOOK.length * 100}%"></i></span> <b>${r.total}</b></td>
+          ${r.u.map(x => `<td class="num">${x}</td>`).join("")}<td class="num">${r.q}</td><td class="num">${r.c}</td><td>${when(r.t)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="note">GS = Getting Started, U1–U6 = units. Ranking: idioms mastered, then right answers.</p>`
+      : `<p class="note">No students yet. Paste the first progress codes above.</p>`}
+      <p class="note">The scoreboard is saved in this browser. <button class="link" type="button" id="clear">Delete the scoreboard</button></p>
+    </section>
+    <button class="link" type="button" id="h">Back to the student view</button>
+  </div>`;
+  $("add").onclick = () => {
+    const found = readCodes($("codes").value);
+    if (!found.length) { $("msg").textContent = "No valid codes found. Check that the whole code was copied, starting with IDT1."; return; }
+    const c = loadClass(); let added = 0;
+    for (const d of found) { const k = (d.n.trim() + "|" + (d.g || "").trim()).toLowerCase(); if (!c[k] || c[k].t <= d.t) { c[k] = d; added++; } }
+    saveClass(c); teacher(filter); $("msg").textContent = `${found.length} code${found.length === 1 ? "" : "s"} read, ${added} added or updated.`;
+  };
+  if ($("grp")) $("grp").onchange = e => teacher(e.target.value || undefined);
+  $("clear").onclick = e => { if (e.target.dataset.sure) { saveClass({}); teacher(); } else { e.target.dataset.sure = "1"; e.target.textContent = "Tap again to delete every student"; } };
+  $("h").onclick = home; scrollTo(0, 0);
+}
+
+$("homeLink").onclick = home;
+home();
+</script>
+
+</body>
+</html>

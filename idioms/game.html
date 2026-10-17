@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Idiom Rebus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&family=Noto+Color+Emoji&display=swap">
+<style>
+/* Layout: one-screen whiteboard app — header strip, giant flashcard stage, team scoreboard rail at the bottom.
+   Single light theme on purpose: projectors wash out dark backgrounds in a lit classroom. */
+:root {
+  --bg: #E9EEF5;
+  --card: #FFFFFF;
+  --ink: #14213D;
+  --muted: #56627A;
+  --line: #C9D2E0;
+  --hi: #FFC93C;
+  --hi-soft: #FFF1C7;
+  --ok: #1F9E89;
+  --t1: #E8513F; --t2: #1E7FD0; --t3: #1F9E89; --t4: #8A4FC2;
+  --f-display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", Verdana, sans-serif;
+  --f-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "Android Emoji", sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box; overflow: hidden;
+}
+*, *::before, *::after { box-sizing: border-box; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 4px solid var(--t2); outline-offset: 3px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; gap: clamp(8px, 1.6vh, 18px); padding-block: clamp(8px, 1.6vh, 18px); }
+
+/* header */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { font-family: var(--f-display); font-size: clamp(1.3rem, 2.6vw, 2.1rem); letter-spacing: .01em; line-height: 1; margin: 0; }
+.brand span { background: var(--hi); padding: 0 .2em; border-radius: 6px; }
+.progress { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; font-size: clamp(.95rem, 1.4vw, 1.2rem); }
+.spacer { flex: 1; }
+.tool {
+  min-height: 48px; padding: 0 16px; border: 2px solid var(--ink); background: var(--card);
+  border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;
+}
+.tool:hover { background: var(--hi-soft); }
+.timer {
+  min-width: 108px; justify-content: center; font-family: var(--f-display); font-size: 1.5rem;
+  font-variant-numeric: tabular-nums; letter-spacing: .03em;
+}
+.timer.low { background: var(--t1); color: #fff; border-color: var(--t1); animation: pulse 1s infinite; }
+.timer.done { background: var(--ink); color: #fff; }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+
+/* stage */
+.stage { min-height: 0; display: grid; grid-template-columns: 1fr auto; gap: clamp(10px, 1.6vw, 22px); }
+.card {
+  min-height: 0; background: var(--card); border: 3px solid var(--ink); border-radius: 28px;
+  box-shadow: 10px 10px 0 var(--ink); position: relative;
+  display: grid; grid-template-rows: auto 1fr auto auto; align-items: center; justify-items: center;
+  padding: clamp(12px, 2vh, 26px) clamp(14px, 3vw, 40px); overflow: hidden;
+}
+.meta { justify-self: stretch; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.chip { font-weight: 700; font-size: clamp(.85rem, 1.2vw, 1.05rem); padding: 4px 12px; border-radius: 999px; border: 2px solid var(--ink); }
+.chip.level { background: var(--hi); }
+.chip.value { background: var(--ink); color: #fff; border-color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.clue {
+  font-family: var(--f-emoji); font-size: clamp(2.4rem, min(14vh, calc(60vw / var(--k, 5))), 9rem); line-height: 1.15;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: .12em; text-align: center; margin: 0;
+}
+.clue-text { font-family: var(--f-body); font-weight: 700; font-size: clamp(1.3rem, 3.1vw, 2.8rem); line-height: 1.3; text-align: center; max-width: 32ch; margin: 0; text-wrap: balance; animation: rise .4s both; }
+.clue-text.idiom { font-family: var(--f-display); font-weight: 400; font-size: clamp(2rem, 5vw, 4.4rem); }
+.clue-mini { font-family: var(--f-emoji); font-size: clamp(1.6rem, 3.4vw, 2.8rem); text-align: center; }
+.gap { display: inline-block; min-width: 5em; border-bottom: 5px solid var(--ink); background: var(--hi-soft); border-radius: 6px 6px 0 0; padding: 0 .2em; }
+.gap.filled { background: var(--hi); }
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } }
+.task { font-weight: 700; color: var(--muted); font-size: clamp(.95rem, 1.4vw, 1.25rem); text-align: center; }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; width: 100%; font-size: clamp(.95rem, 1.5vw, 1.35rem); }
+.opt { display: flex; align-items: center; gap: 12px; text-align: left; min-height: 56px; padding: 10px 14px; border: 3px solid var(--ink); border-radius: 16px; background: var(--card); font-weight: 700; line-height: 1.25; }
+.opt b { font-family: var(--f-display); font-weight: 400; font-size: 1.4em; min-width: 1.2em; }
+.opt:hover:not(:disabled) { background: var(--hi-soft); }
+.opt.right { background: var(--ok); border-color: var(--ok); color: #fff; }
+.opt.wrong { background: var(--t1); border-color: var(--t1); color: #fff; text-decoration: line-through; }
+.opt.gone { opacity: .2; }
+.opt:disabled { cursor: default; }
+.clue span { display: inline-block; animation: pop .45s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes pop { from { transform: scale(.3) rotate(-12deg); opacity: 0; } }
+
+.slots { min-height: clamp(48px, 9vh, 92px); display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: .55em 1.1em; font-size: clamp(1.1rem, 2.4vw, 2.3rem); max-width: 100%; }
+.prompt { font-family: var(--f-display); color: var(--muted); font-size: clamp(1.2rem, 2.4vw, 2rem); }
+.word { display: flex; gap: .14em; }
+.box {
+  width: 1.15em; height: 1.45em; display: grid; place-items: center; border-bottom: 4px solid var(--ink);
+  font-family: var(--f-display); text-transform: uppercase; line-height: 1;
+}
+.box.shown { background: var(--hi-soft); border-radius: 6px 6px 0 0; animation: flip .4s both; }
+.box.punct { border-bottom-color: transparent; width: .5em; }
+@keyframes flip { from { transform: rotateX(90deg); } }
+
+.reveal {
+  justify-self: stretch; margin-top: clamp(6px, 1.2vh, 14px); border-top: 3px dashed var(--line);
+  padding-top: clamp(8px, 1.4vh, 16px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px 32px;
+  font-size: clamp(.95rem, 1.45vw, 1.35rem); line-height: 1.35;
+}
+.reveal h3 { margin: 0 0 2px; font-size: .72em; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.reveal > div { margin: 0; min-width: 0; }
+.reveal .ex { font-style: italic; }
+
+/* side controls */
+.controls { display: flex; flex-direction: column; gap: 12px; justify-content: center; width: clamp(150px, 15vw, 220px); }
+.big {
+  min-height: clamp(56px, 9vh, 84px); border-radius: 18px; border: 3px solid var(--ink); background: var(--card);
+  font-family: var(--f-display); font-size: clamp(1.1rem, 1.9vw, 1.7rem); letter-spacing: .02em;
+  box-shadow: 5px 5px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 12px;
+}
+.big:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--ink); }
+.big.primary { background: var(--hi); }
+.big:disabled { opacity: .4; cursor: default; }
+.big small { font-family: var(--f-body); font-size: .55em; font-weight: 700; opacity: .7; }
+.keys { color: var(--muted); font-size: .85rem; line-height: 1.5; text-align: center; }
+kbd { font-family: var(--f-body); font-weight: 700; border: 1.5px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 0 5px; background: var(--card); }
+
+/* scoreboard */
+.teams { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: clamp(8px, 1.2vw, 18px); }
+.team {
+  --c: var(--t1); border: 3px solid var(--c); border-radius: 20px; background: var(--card);
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
+  padding: clamp(6px, 1vh, 12px) clamp(10px, 1.2vw, 16px); min-width: 0;
+}
+.team:nth-child(2) { --c: var(--t2); } .team:nth-child(3) { --c: var(--t3); } .team:nth-child(4) { --c: var(--t4); }
+.team .name { font-family: var(--f-display); font-size: clamp(1rem, 1.7vw, 1.55rem); color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.team .score { font-family: var(--f-display); font-size: clamp(2rem, 4.4vw, 3.6rem); font-variant-numeric: tabular-nums; line-height: 1; min-width: 1.4em; text-align: right; }
+.team .score.bump { animation: bump .5s; }
+@keyframes bump { 40% { transform: scale(1.35); color: var(--c); } }
+.award { display: flex; gap: 6px; }
+.award button { min-width: 52px; min-height: 52px; border-radius: 14px; border: 0; background: var(--c); color: #fff; font-family: var(--f-display); font-size: 1.35rem; }
+.award .minus { background: transparent; color: var(--c); border: 2px solid var(--c); min-width: 40px; font-size: 1.2rem; }
+
+/* end screen */
+.end { display: grid; place-items: center; gap: 18px; text-align: center; }
+.end h2 { font-family: var(--f-display); font-size: clamp(2rem, 5vw, 4.4rem); margin: 0; line-height: 1.05; text-wrap: balance; }
+.end p { margin: 0; font-size: clamp(1rem, 1.8vw, 1.5rem); color: var(--muted); }
+
+/* setup dialog */
+dialog { border: 3px solid var(--ink); border-radius: 24px; box-shadow: 10px 10px 0 var(--ink); padding: 0; width: min(640px, calc(100vw - 32px)); background: var(--card); color: var(--ink); }
+dialog::backdrop { background: rgba(20, 33, 61, .45); }
+.setup { padding: 22px 26px; display: grid; gap: 18px; }
+.setup h2 { font-family: var(--f-display); font-size: 2rem; margin: 0; }
+.setup fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.setup legend { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; }
+.seg span { display: inline-flex; min-height: 46px; min-width: 56px; align-items: center; justify-content: center; padding: 0 14px; border: 2px solid var(--ink); border-radius: 12px; font-weight: 700; }
+.seg input:checked + span { background: var(--ink); color: #fff; }
+.seg input:focus-visible + span { outline: 4px solid var(--t2); outline-offset: 2px; }
+.names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.names input { min-height: 46px; border: 2px solid var(--line); border-radius: 12px; padding: 0 12px; font-weight: 700; min-width: 0; }
+.names input:disabled { opacity: .35; }
+.setup .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.note { font-size: .9rem; color: var(--muted); margin: 0; }
+
+@media (max-width: 820px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100%; }
+  .stage { grid-template-columns: 1fr; }
+  .controls { width: auto; flex-direction: row; flex-wrap: wrap; }
+  .controls .big { flex: 1 1 140px; }
+  .keys { display: none; }
+  .reveal { grid-template-columns: 1fr; }
+  .options { grid-template-columns: 1fr; }
+  .teams { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { box-shadow: 6px 6px 0 var(--ink); }
+}
+@media (max-width: 460px) {
+  .teams { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <h1 class="brand"><span>Idiom</span> Rebus</h1>
+    <span class="chip">2º Bachillerato</span>
+    <div class="progress" id="progress">Card 1 of 90</div>
+    <div class="spacer"></div>
+    <button class="tool timer" id="timer" type="button" title="Start or pause the timer (T)">—</button>
+    <button class="tool" id="setupBtn" type="button">Setup</button>
+    <button class="tool" id="fsBtn" type="button" title="Full screen (F)">Full screen</button>
+  </header>
+
+  <main class="stage" id="stage">
+    <section class="card" id="card" aria-live="polite"></section>
+    <nav class="controls" aria-label="Game controls">
+      <button class="big" id="hintBtn" type="button">Hint <small id="hintLeft">3 left</small></button>
+      <button class="big primary" id="revealBtn" type="button">Reveal</button>
+      <button class="big" id="nextBtn" type="button">Next ›</button>
+      <button class="big" id="prevBtn" type="button">‹ Back</button>
+      <p class="keys"><kbd>H</kbd> hint · <kbd>Space</kbd> reveal<br><kbd>→</kbd> next · <kbd>1</kbd>–<kbd>4</kbd> award<br><kbd>A</kbd>–<kbd>D</kbd> answer<br><kbd>T</kbd> timer · <kbd>F</kbd> full screen</p>
+    </nav>
+  </main>
+
+  <footer class="teams" id="teams"></footer>
+</div>
+
+<dialog id="setup">
+  <form class="setup" id="setupForm" method="dialog">
+    <h2>Game setup</h2>
+    <fieldset>
+      <legend>Teams</legend>
+      <div class="seg" id="teamCount">
+        <label><input type="radio" name="tc" id="tc1" value="1"><span>1</span></label>
+        <label><input type="radio" name="tc" id="tc2" value="2"><span>2</span></label>
+        <label><input type="radio" name="tc" id="tc3" value="3"><span>3</span></label>
+        <label><input type="radio" name="tc" id="tc4" value="4"><span>4</span></label>
+      </div>
+      <div class="names">
+        <input id="n1" maxlength="18" aria-label="Team 1 name">
+        <input id="n2" maxlength="18" aria-label="Team 2 name">
+        <input id="n3" maxlength="18" aria-label="Team 3 name">
+        <input id="n4" maxlength="18" aria-label="Team 4 name">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Burlington Skills 2 units</legend>
+      <div class="seg" id="units"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Game types (Emoji rebus by default; tick more to mix them)</legend>
+      <div class="seg" id="modes"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Timer per card</legend>
+      <div class="seg">
+        <label><input type="radio" name="tm" id="tm0" value="0"><span>Off</span></label>
+        <label><input type="radio" name="tm" id="tm30" value="30"><span>30 s</span></label>
+        <label><input type="radio" name="tm" id="tm60" value="60"><span>60 s</span></label>
+        <label><input type="radio" name="tm" id="tm90" value="90"><span>90 s</span></label>
+      </div>
+    </fieldset>
+    <p class="note">Emoji rebus, definition and fill the gap: the blanks show the words and letters of the idiom; hint 1 gives the first letters, hint 2 the key word, hint 3 another clue. Choose the meaning: each hint removes a wrong answer. A card is worth 3 points with no hints, 2 after one hint and 1 after two or more. Tap a team's +3 / +2 / +1 to award it; the answer appears at once.</p>
+    <div class="row">
+      <button class="tool" type="submit" value="cancel">Cancel</button>
+      <button class="tool" type="submit" value="apply" style="background:var(--hi)">New game</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const IDIOMS = [
+  { u: "GS", c: "🏷️💸💸➡️💪🦵😱", a: "Cost an arm and a leg", k: "arm", m: "Be very expensive.", ex: "Those concert tickets cost an arm and a leg." },
+  { u: "GS", c: "🛋️🥔📺🍿😴", a: "Couch potato", k: "potato", m: "A lazy person who spends hours sitting and watching TV.", ex: "Don't be a couch potato: come for a walk!" },
+  { u: "GS", c: "📏🛣️🏃➡️🔮📅", a: "In the long run", k: "long", m: "Over a long period of time; in the future.", ex: "Studying a bit every day pays off in the long run." },
+  { u: "GS", c: "🦘⬆️🎟️✨😃", a: "Jump at the chance", k: "chance", m: "Accept an opportunity immediately and happily.", ex: "When they offered me the exchange, I jumped at the chance." },
+  { u: "GS", c: "👁️👀🔍🐕👶", a: "Keep an eye on", k: "eye", m: "Watch someone or something carefully.", ex: "Can you keep an eye on my bag for a minute?" },
+  { u: "GS", c: "✋➡️👄🍞💸🤏", a: "Live from hand to mouth", k: "mouth", m: "Have only just enough money to survive.", ex: "After he lost his job, the family lived from hand to mouth." },
+  { u: "GS", c: "🔚🤝🔚💶😓", a: "Make ends meet", k: "ends", m: "Have just enough money to pay for what you need.", ex: "Many students work part-time to make ends meet." },
+  { u: "GS", c: "🙋💳🛣️🚫👨‍👩‍👧", a: "Pay your own way", k: "way", m: "Pay for your own expenses without help.", ex: "She pays her own way through university." },
+  { u: "GS", c: "🦹🎭⭐👏👏", a: "Steal the show", k: "show", m: "Get all the attention and praise at an event.", ex: "The youngest actor stole the show." },
+  { u: "GS", c: "🚶🥚🥚🥚😬🤫", a: "Walk on eggshells", k: "eggshells", m: "Be very careful not to upset someone.", ex: "Everyone walks on eggshells when the coach is angry." },
+  { u: "GS", c: "💥📀🏅⏱️🏃", a: "Break a record", k: "record", m: "Do better than the best result ever.", ex: "She broke a record in the 100 metres." },
+  { u: "U1", c: "📋❤️🆚💀🚨", a: "A matter of life and death", k: "death", m: "Something extremely important or serious.", ex: "Relax, it's not a matter of life and death!" },
+  { u: "U1", c: "😂🙅⚠️😟", a: "Be no laughing matter", k: "laughing", m: "Be serious, not something to joke about.", ex: "Failing your exams is no laughing matter." },
+  { u: "U1", c: "🎯〰️💼⚖️😰", a: "Be on the line", k: "line", m: "Be at risk.", ex: "Her scholarship is on the line in this exam." },
+  { u: "U1", c: "✂️📏📖➡️📄👌", a: "Cut a long story short", k: "story", m: "Tell only the main point.", ex: "To cut a long story short, we missed the plane." },
+  { u: "U1", c: "🧠⬆️🪨💪✨", a: "Mind over matter", k: "mind", m: "Using willpower to overcome a physical problem.", ex: "Finishing a marathon is mind over matter." },
+  { u: "U1", c: "🤲🎁😐🤷🙏❌", a: "Take for granted", k: "granted", m: "Not value something because you always have it.", ex: "Don't take for granted the people who help you." },
+  { u: "U1", c: "😩➕🌧️➕🚌❌😫", a: "To make matters worse", k: "worse", m: "Making a bad situation even worse.", ex: "I got lost and, to make matters worse, my phone died." },
+  { u: "U1", c: "🐢🆚🐇🏁🏆😮", a: "Win against the odds", k: "odds", m: "Succeed when it seemed very unlikely.", ex: "The small team won against the odds." },
+  { u: "U1", c: "📍🏠↔️🌍✈️", a: "Near and far", k: "far", m: "Everywhere; from many places.", ex: "Fans came from near and far to see the concert." },
+  { u: "U1", c: "⏳⌛🔜✅", a: "A matter of time", k: "time", m: "Certain to happen sooner or later.", ex: "It's only a matter of time before they find out." },
+  { u: "U2", c: "🫵🗣️🏷️⚽🎸🎨📚", a: "You name it", k: "name", m: "Anything you can think of.", ex: "Football, music, art... you name it, she's done it." },
+  { u: "U2", c: "🙅💼🤷👀❌", a: "It's not my business", k: "business", m: "It doesn't concern me.", ex: "Who is she dating? It's not my business." },
+  { u: "U2", c: "🥳🍷🎶💃🎄", a: "Make merry", k: "merry", m: "Celebrate and have fun.", ex: "On Christmas Eve the whole village made merry." },
+  { u: "U2", c: "💳💳📉🕳️😰", a: "Get into debt", k: "debt", m: "Start owing money.", ex: "Some students get into debt to pay for university." },
+  { u: "U2", c: "👔📋❌🩳🩴😬", a: "Break the dress code", k: "dress", m: "Wear clothes that the rules don't allow.", ex: "He broke the dress code by wearing shorts." },
+  { u: "U2", c: "🤪🌀😵💥", a: "Go mad", k: "mad", m: "Become crazy or very angry.", ex: "My mum will go mad if I come home late." },
+  { u: "U3", c: "🗣️🙋🗳️👥✅", a: "Have a say", k: "say", m: "Have the right to give your opinion.", ex: "Students should have a say in school rules." },
+  { u: "U3", c: "✋🛑🚫⛔", a: "Put a stop to", k: "stop", m: "Make something end.", ex: "The council put a stop to the noise at night." },
+  { u: "U3", c: "🦶⬇️💥✋😠🚫", a: "Put your foot down", k: "foot", m: "Be firm and refuse to accept something.", ex: "Dad put his foot down: no phones at dinner." },
+  { u: "U3", c: "🧪📝✅❌💪", a: "Put to the test", k: "test", m: "Check how good or strong something is.", ex: "Our friendship was put to the test during the trip." },
+  { u: "U3", c: "🏃🚂💨❌🪫😩", a: "Run out of steam", k: "steam", m: "Lose energy or enthusiasm.", ex: "I ran out of steam after three hours of studying." },
+  { u: "U3", c: "🏃⏰❌⌛😱", a: "Run out of time", k: "time", m: "Have no time left.", ex: "I ran out of time and didn't finish the exam." },
+  { u: "U3", c: "🏃💶🤏👛😟", a: "Run short of money", k: "money", m: "Have very little money left.", ex: "We ran short of money at the end of the trip." },
+  { u: "U3", c: "🏃🐺🌲🎉🤪", a: "Run wild", k: "wild", m: "Behave without any control.", ex: "The kids ran wild at the party." },
+  { u: "U3", c: "🏃⏰💨🚌😰", a: "Run late", k: "late", m: "Be behind schedule.", ex: "Sorry, I'm running late!" },
+  { u: "U3", c: "🏃🛒📮💊✅", a: "Run an errand", k: "errand", m: "Go out to do a small job, like shopping.", ex: "Can you run an errand and buy some bread?" },
+  { u: "U3", c: "🔧❌➡️✅👍", a: "Put something right", k: "right", m: "Correct a mistake or problem.", ex: "I apologised and tried to put things right." },
+  { u: "U3", c: "🫸😓⏱️📈", a: "Put pressure on", k: "pressure", m: "Try to force someone to do something.", ex: "My parents put pressure on me to study medicine." },
+  { u: "U4", c: "💪🏃🎻😁✅", a: "As fit as a fiddle", k: "fiddle", m: "Very healthy.", ex: "My grandad is 80 and as fit as a fiddle." },
+  { u: "U4", c: "😨⚪👻🫥", a: "As pale as a ghost", k: "ghost", m: "Very pale.", ex: "You look as pale as a ghost. Are you OK?" },
+  { u: "U4", c: "🤢🤮🐶🛌🌡️", a: "As sick as a dog", k: "dog", m: "Very ill, especially vomiting.", ex: "I ate some bad fish and was as sick as a dog." },
+  { u: "U4", c: "🚪💀🛌🏥😵", a: "At death's door", k: "door", m: "Very seriously ill.", ex: "He was at death's door, but he recovered." },
+  { u: "U4", c: "🛌➡️🧍🦶🦶💪😃", a: "Back on your feet", k: "feet", m: "Healthy again after an illness.", ex: "After a week in bed, she's back on her feet." },
+  { u: "U4", c: "💊😖🍋👅😣", a: "A bitter pill to swallow", k: "pill", m: "Something unpleasant you have to accept.", ex: "Losing the final was a bitter pill to swallow." },
+  { u: "U4", c: "🤕➡️🩹📈🙂", a: "On the mend", k: "mend", m: "Getting better after an illness.", ex: "My leg is on the mend." },
+  { u: "U4", c: "🏃💨😮‍💨🍔🛋️", a: "Out of shape", k: "shape", m: "Not physically fit.", ex: "I'm so out of shape that I can't run for the bus." },
+  { u: "U4", c: "🚫❓🙅❌", a: "Out of the question", k: "question", m: "Impossible; not allowed.", ex: "Going out on a school night is out of the question." },
+  { u: "U4", c: "🔄🤢🤮🍲🪱", a: "Turn your stomach", k: "stomach", m: "Make you feel sick.", ex: "The smell of that food turns my stomach." },
+  { u: "U4", c: "👇🌦️🌡️🤒🛌", a: "Under the weather", k: "weather", m: "Feeling slightly ill.", ex: "I stayed at home because I was a bit under the weather." },
+  { u: "U4", c: "🖼️😁💪🍎✨", a: "Be the picture of health", k: "picture", m: "Look very healthy.", ex: "After the holiday she was the picture of health." },
+  { u: "U4", c: "🏥🔪🛌😷💉", a: "Go under the knife", k: "knife", m: "Have surgery.", ex: "He went under the knife to fix his knee." },
+  { u: "U4", c: "😬🧗⚡😰", a: "On edge", k: "edge", m: "Nervous and worried.", ex: "I was on edge all day waiting for my results." },
+  { u: "U4", c: "🦵🦵🔚😵🪫", a: "On your last legs", k: "legs", m: "Very tired, or about to stop working.", ex: "My old laptop is on its last legs." },
+  { u: "U4", c: "↩️📉🤒😟", a: "Take a turn for the worse", k: "worse", m: "Suddenly become worse.", ex: "Her health took a turn for the worse." },
+  { u: "U4", c: "🌙🕛👀📱🥱", a: "Stay up late", k: "late", m: "Go to bed late.", ex: "Don't stay up late before the exam." },
+  { u: "U4", c: "🌅⏰🐓🙋💪", a: "Early riser", k: "riser", m: "A person who gets up early.", ex: "My dad is an early riser: he's up at six." },
+  { u: "U5", c: "🎤💡🔦⭐📸", a: "Be in the limelight", k: "limelight", m: "Be the centre of public attention.", ex: "She loves being in the limelight." },
+  { u: "U5", c: "🎭🚪👷🎬🔧", a: "Behind the scenes", k: "scenes", m: "Out of public view; secretly.", ex: "A lot of work goes on behind the scenes." },
+  { u: "U5", c: "🎭🎬👊🦵🍀👏", a: "Break a leg", k: "leg", m: "Good luck (said before a performance).", ex: "Break a leg in the school play tonight!" },
+  { u: "U5", c: "🚶🛣️🛣️🛣️📈🏆", a: "Come a long way", k: "way", m: "Improve or progress a lot.", ex: "Your English has come a long way this year." },
+  { u: "U5", c: "😭😡😍📈🔥", a: "Emotions run high", k: "emotions", m: "People feel very strongly.", ex: "Emotions ran high during the final." },
+  { u: "U5", c: "🏃💯💪🔥🏁", a: "Go all out", k: "all", m: "Make the biggest effort possible.", ex: "The team went all out to win." },
+  { u: "U5", c: "👊⏰🌟💰🎉", a: "Hit the big time", k: "big", m: "Become very successful or famous.", ex: "The band hit the big time with their second album." },
+  { u: "U5", c: "🎬😱🪑⬛👀", a: "On the edge of your seat", k: "seat", m: "Very excited and nervous to see what happens.", ex: "The film kept me on the edge of my seat." },
+  { u: "U5", c: "🌍➡️🚀🪐😋", a: "Out of this world", k: "world", m: "Extraordinary; fantastic.", ex: "The chocolate cake was out of this world." },
+  { u: "U5", c: "🏃🎪👑📋🎬", a: "Run the show", k: "show", m: "Be in control; be the boss.", ex: "My older sister runs the show at home." },
+  { u: "U5", c: "🎤🎶❤️💥🎵", a: "Sing your heart out", k: "heart", m: "Sing with all your energy and emotion.", ex: "She sang her heart out at the concert." },
+  { u: "U5", c: "🎭⏩🎬💪🙌", a: "The show must go on", k: "must", m: "Continue even if there are problems.", ex: "The singer was ill, but the show must go on." },
+  { u: "U5", c: "🎪🚌🛣️▶️🎉", a: "Get the show on the road", k: "road", m: "Start an activity or project.", ex: "Everyone's here, so let's get the show on the road." },
+  { u: "U5", c: "↩️✏️📋🗑️🔁", a: "Go back to the drawing board", k: "drawing", m: "Start again because a plan failed.", ex: "The idea didn't work, so we went back to the drawing board." },
+  { u: "U5", c: "🎬🏞️🎭📍✨", a: "Set the scene", k: "scene", m: "Prepare the situation for something.", ex: "The first chapter sets the scene for the story." },
+  { u: "U5", c: "🎟️💰🎬🎯🔥", a: "A box-office hit", k: "hit", m: "A very successful film or show.", ex: "The film was a box-office hit." },
+  { u: "U6", c: "☀️🌅⏰😃✨", a: "Bright and early", k: "early", m: "Very early in the morning.", ex: "We left bright and early to avoid the traffic." },
+  { u: "U6", c: "➡️🚪⬅️🔍📋", a: "The ins and outs", k: "ins", m: "All the details of something.", ex: "She knows the ins and outs of the job." },
+  { u: "U6", c: "⏰❗🔜❌♾️", a: "Now or never", k: "never", m: "This is the last chance.", ex: "Ask her to dance: it's now or never!" },
+  { u: "U6", c: "☮️🤫😌🌳📖", a: "Peace and quiet", k: "quiet", m: "A calm, silent situation.", ex: "I go to the library for some peace and quiet." },
+  { u: "U6", c: "🧪✅✅👍🔁", a: "Tried and tested", k: "tested", m: "Proved to work well.", ex: "This is a tried and tested method." },
+  { u: "U6", c: "🍷🍽️🥂😋💼", a: "Wine and dine", k: "dine", m: "Entertain someone with good food and drink.", ex: "The company wined and dined its new clients." },
+  { u: "U6", c: "1️⃣🔁👶➡️👴🌟", a: "Once in a lifetime", k: "lifetime", m: "Happening only once in your life.", ex: "Meeting my idol was a chance that comes once in a lifetime." },
+  { u: "U6", c: "🖍️⚪🧀🟡↔️🙅", a: "Chalk and cheese", k: "cheese", m: "Completely different.", ex: "My brother and I are like chalk and cheese." },
+  { u: "U6", c: "✅❌📋👍👎", a: "Dos and don'ts", k: "Dos", m: "Rules about what you should and shouldn't do.", ex: "Here are the dos and don'ts of a job interview." },
+  { u: "U6", c: "⚖️🟩✅🏆🤝", a: "Fair and square", k: "square", m: "Honestly, without cheating.", ex: "We won the match fair and square." },
+  { u: "U6", c: "🔨🏆❓💔💥", a: "Make or break", k: "break", m: "Decide whether something succeeds or fails.", ex: "This interview is make or break for my career." },
+  { u: "U6", c: "🏠🛡️😊🙌✅", a: "Safe and sound", k: "sound", m: "Safe and not hurt.", ex: "They arrived home safe and sound." },
+  { u: "U6", c: "💯❓0️⃣🎲", a: "All or nothing", k: "nothing", m: "Everything or nothing at all; no middle way.", ex: "For him, it's all or nothing." },
+  { u: "U6", c: "⬅️➡️⬅️➡️🏓", a: "Back and forth", k: "forth", m: "From one side to another, without a decision.", ex: "We argued back and forth for hours." },
+  { u: "U6", c: "👥⚽🤝💪", a: "Team player", k: "team", m: "A person who works well with others.", ex: "We're looking for a team player." },
+  { u: "U6", c: "🔧🌍✨➡️🌱", a: "Make a difference", k: "difference", m: "Have a good effect on a situation.", ex: "Volunteers really make a difference." },
+  { u: "U6", c: "💼💶🏠🍞", a: "Earn a living", k: "living", m: "Earn money to pay for your life.", ex: "She earns a living as a photographer." },
+  { u: "U6", c: "💡🔛📴🔁", a: "On and off", k: "off", m: "Sometimes; not continuously.", ex: "It rained on and off all day." },
+  { u: "X", c: "👊💥🧊🧊➡️🤝😊", a: "Break the ice", k: "ice", m: "Say or do something to make people feel relaxed when they first meet.", ex: "Our teacher told a joke to break the ice on the first day." },
+  { u: "X", c: "🌧️☔🐱🐈🐶🐕⬇️", a: "Raining cats and dogs", k: "cats", m: "Raining very heavily.", ex: "Take an umbrella, it's raining cats and dogs." },
+  { u: "X", c: "🧩➕🎂➡️😎👌", a: "A piece of cake", m: "Something very easy to do.", ex: "The listening test was a piece of cake." },
+  { u: "X", c: "1️⃣⏱️🔵🌕🔭📅", a: "Once in a blue moon", k: "moon", m: "Very rarely.", ex: "My cousin only calls me once in a blue moon." },
+  { u: "X", c: "🫙🫘🫘💦😮🤫❌", a: "Spill the beans", k: "beans", m: "Reveal a secret.", ex: "Come on, spill the beans: who sent you the flowers?" },
+  { u: "X", c: "👜🐈➡️💨🤫😱", a: "Let the cat out of the bag", k: "cat", m: "Reveal a secret by accident.", ex: "She let the cat out of the bag about the surprise party." },
+  { u: "X", c: "👊📚📚✏️🤓", a: "Hit the books", m: "Start studying hard.", ex: "Exams start on Monday, so I need to hit the books." },
+  { u: "X", c: "😮🦷🍔🍔🍔🍔🤯", a: "Bite off more than you can chew", k: "chew", m: "Try to do more than you are able to manage.", ex: "Don't bite off more than you can chew: one after-school job is enough." },
+  { u: "X", c: "1️⃣🪨➡️🐦🐦✌️", a: "Kill two birds with one stone", m: "Achieve two things with one action.", ex: "Cycling to school kills two birds with one stone: exercise and no bus fare." },
+  { u: "X", c: "🎾➡️🫵🏟️⏳🤔", a: "The ball is in your court", m: "It's your turn to decide or act.", ex: "I've made my offer; the ball is in your court now." },
+  { u: "X", c: "🥱👊🛏️💤🌙", a: "Hit the sack", m: "Go to bed.", ex: "I'm exhausted, I'm going to hit the sack." },
+  { u: "X", c: "🦋🦋🦋😰🤢🎤", a: "Butterflies in your stomach", m: "A nervous feeling before something important.", ex: "I always get butterflies in my stomach before a presentation." },
+  { u: "X", c: "⏰🪽🕊️💨📆📆", a: "Time flies", m: "Time passes very quickly.", ex: "Time flies when you're having fun." },
+  { u: "X", c: "😇🙏🥸🎭➡️🎁😃", a: "A blessing in disguise", m: "Something that seems bad but turns out to be good.", ex: "Missing the bus was a blessing in disguise: I met my best friend at the stop." },
+  { u: "X", c: "😁☁️9️⃣☁️🥳", a: "On cloud nine", m: "Extremely happy.", ex: "She was on cloud nine after passing her driving test." },
+  { u: "X", c: "🐷🪽✈️☁️❌🙅", a: "When pigs fly", k: "pigs", m: "Never; it will not happen.", ex: "My brother will tidy his room when pigs fly." },
+  { u: "X", c: "😭🥛💦🤷⏪❌", a: "Cry over spilt milk", m: "Be upset about something that cannot be changed.", ex: "The exam is over; there's no use crying over spilt milk." },
+  { u: "X", c: "🐘🛋️👥🤐😬", a: "The elephant in the room", m: "An obvious problem nobody wants to talk about.", ex: "Climate change was the elephant in the room at the meeting." },
+  { u: "X", c: "🥶🦶🦶➡️💍😬🏃💨", a: "Get cold feet", k: "feet", m: "Become too nervous to do something you planned.", ex: "He got cold feet and didn't sing at the talent show." },
+  { u: "X", c: "✋🛑🐎🐎💨⏳", a: "Hold your horses", m: "Wait; don't rush.", ex: "Hold your horses! Let me finish explaining." },
+  { u: "X", c: "🐕🗣️🌳❌🐈🌲✅", a: "Barking up the wrong tree", k: "tree", m: "Looking for a solution or blaming someone in the wrong place.", ex: "If you think I took your phone, you're barking up the wrong tree." },
+  { u: "X", c: "🌧️☁️🥈✨➡️🌈🙂", a: "Every cloud has a silver lining", m: "Every bad situation has something good in it.", ex: "I lost my job, but every cloud has a silver lining: now I can study." },
+  { u: "X", c: "🔥🛢️🕛🌙📚🥱", a: "Burn the midnight oil", m: "Work or study late into the night.", ex: "She burned the midnight oil to finish her project." },
+  { u: "X", c: "😳🎵🎺➡️😡👨‍⚖️", a: "Face the music", m: "Accept the consequences of what you did.", ex: "He broke the window, so now he has to face the music." },
+  { u: "X", c: "🐑🐑⬛🐑🐑👀", a: "The black sheep", m: "The member of a group who is different or a source of shame.", ex: "My uncle is the black sheep of the family." },
+  { u: "X", c: "🍎👁️👵❤️👶", a: "The apple of my eye", m: "A person you love very much.", ex: "Her granddaughter is the apple of her eye." },
+  { u: "X", c: "🧍🛁♨️🔥😰", a: "In hot water", m: "In trouble.", ex: "You'll be in hot water if you miss the exam." },
+  { u: "X", c: "🦹💰⚡➡️🎤👏😠", a: "Steal someone's thunder", k: "thunder", m: "Take attention or praise that someone else deserved.", ex: "He stole my thunder by announcing my idea first." },
+  { u: "X", c: "🥇🌍➕🌏😎", a: "The best of both worlds", m: "The advantages of two different things at the same time.", ex: "Living near the beach and the city gives you the best of both worlds." },
+  { u: "X", c: "🏃🛣️➕1️⃣🏁💪", a: "Go the extra mile", m: "Make more effort than is expected.", ex: "Our coach always goes the extra mile for the team." },
+  { u: "X", c: "🧑‍🎓🧠☁️☁️💭🙄", a: "Head in the clouds", m: "Not paying attention to what is happening; daydreaming.", ex: "Pay attention! You always have your head in the clouds." },
+  { u: "X", c: "🐄⤴️🌕🎉😆", a: "Over the moon", k: "moon", m: "Extremely happy and pleased.", ex: "I was over the moon when I got my exam results." },
+  { u: "X", c: "📖👀➡️🧠❤️🔁", a: "Learn by heart", k: "heart", m: "Memorise something so you can repeat it exactly.", ex: "Actors have to learn by heart all their lines." },
+  { u: "X", c: "🤞🤞🙏🍀📨", a: "Keep your fingers crossed", m: "Hope that something good will happen.", ex: "Keep your fingers crossed for my university application!" },
+  { u: "X", c: "🗣️💬😈🚪👋😳", a: "Speak of the devil", k: "devil", m: "Said when the person you are talking about suddenly appears.", ex: "Speak of the devil! We were just talking about you." },
+  { u: "X", c: "1️⃣💧➡️🌊🌊🌊🤏", a: "A drop in the ocean", m: "A very small amount compared with what is needed.", ex: "Recycling one bottle is a drop in the ocean, but it's a start." },
+  { u: "X", c: "🔨➡️📌🎯✅💯", a: "Hit the nail on the head", m: "Describe exactly what is causing a problem; be exactly right.", ex: "You hit the nail on the head: the real problem is lack of sleep." },
+  { u: "X", c: "🔵🌌➡️💥📞😲", a: "Out of the blue", m: "Suddenly and unexpectedly.", ex: "My old friend called me out of the blue last night." },
+  { u: "X", c: "🕳️⛏️🪓➡️🤝🕊️", a: "Bury the hatchet", m: "Stop arguing and become friends again.", ex: "After years of arguing, the two brothers buried the hatchet." }
+];
+
+const DEFAULT_NAMES = ["Red team", "Blue team", "Green team", "Purple team"];
+const $ = id => document.getElementById(id);
+const UNITS = [["GS", "Getting Started"], ["U1", "Unit 1"], ["U2", "Unit 2"], ["U3", "Unit 3"], ["U4", "Unit 4"], ["U5", "Unit 5"], ["U6", "Unit 6"], ["X", "Extra idioms"]];
+const UNIT_NAME = Object.fromEntries(UNITS);
+$("units").innerHTML = UNITS.map(([v, name]) => `<label><input type="checkbox" id="un${v}" value="${v}"><span>${name} (${IDIOMS.filter(x => x.u === v).length})</span></label>`).join("");
+const MODES = [["emoji", "Emoji rebus", "Which idiom do the emojis show?"], ["meaning", "Definition", "Which idiom has this meaning?"],
+  ["gap", "Fill the gap", "Which idiom completes the sentence?"], ["choice", "Choose the meaning", "What does this idiom mean?"]];
+const MODE_NAME = Object.fromEntries(MODES.map(m => [m[0], m[1]]));
+const MODE_TASK = Object.fromEntries(MODES.map(m => [m[0], m[2]]));
+$("modes").innerHTML = MODES.map(([v, name]) => `<label><input type="checkbox" id="md${v}" value="${v}"><span>${name}</span></label>`).join("");
+const IRR = { buried: "bury", ran: "run", stole: "steal", broke: "break", went: "go", took: "take", sang: "sing", won: "win", kept: "keep", made: "make", came: "come", got: "get", is: "be", are: "be", was: "be", were: "be", "'s": "be", wined: "wine", dined: "dine", runs: "run", running: "run" };
+const POSS = new Set(["your", "my", "his", "her", "their", "its", "our", "one's"]);
+function norm(w) { w = w.toLowerCase().replace(/[^a-z']/g, ""); return IRR[w] || w; }
+function same(aw, tw) {
+  aw = aw.toLowerCase();
+  if (POSS.has(aw)) return POSS.has(tw);
+  if (aw.startsWith("some")) return true;
+  aw = norm(aw);
+  if (aw === tw) return true;
+  if (aw.length <= 3) return tw.startsWith(aw) && tw.length <= aw.length + 3;
+  return aw.slice(0, 4) === tw.slice(0, 4);
+}
+function gapSpan(a, ex) {
+  let aw = a.split(" ");
+  if (aw[0].toLowerCase() === "be" && aw.length > 2) aw = aw.slice(1);
+  const re = /[A-Za-z'’-]+/g; const toks = []; let m;
+  while ((m = re.exec(ex))) toks.push({ w: norm(m[0].replace("’", "'")), s: m.index, e: m.index + m[0].length });
+  for (let i = 0; i < toks.length; i++) {
+    let ok = true;
+    for (let j = 0; j < aw.length; j++) { if (!toks[i + j] || !same(aw[j], toks[i + j].w)) { ok = false; break; } }
+    if (ok) return [toks[i].s, toks[i + aw.length - 1].e];
+  }
+  return null;
+}
+const isLetter = ch => /\p{L}/u.test(ch);
+
+let S;
+function freshState(prev) {
+  const settings = prev?.settings ?? { teamCount: 2, names: DEFAULT_NAMES.slice(), units: ["GS", "U1", "U2", "U3", "U4", "U5", "U6"], modes: ["emoji"], timer: 60 };
+  const deck = buildDeck(settings.units || UNITS.map(u => u[0]));
+  const modes = settings.modes?.length ? settings.modes : ["emoji"];
+  return { v: 3, settings, deck, modes: deck.map(() => modes[Math.floor(Math.random() * modes.length)]), opts: deck.map(i => options(i)), picked: [],
+           pos: 0, hints: 0, revealed: false, awarded: {},
+           scores: [0, 0, 0, 0], timeLeft: settings.timer, running: false, ended: false };
+}
+function buildDeck(units) {
+  const idx = IDIOMS.map((x, i) => i).filter(i => units.includes(IDIOMS[i].u));
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx;
+}
+const cur = () => IDIOMS[S.deck[S.pos]];
+const mode = () => S.modes[S.pos];
+const maxHints = () => mode() === "choice" ? 2 : 3;
+function options(i) {
+  const others = IDIOMS.map((x, j) => j).filter(j => j !== i && IDIOMS[j].m !== IDIOMS[i].m);
+  for (let a = others.length - 1; a > 0; a--) { const b = Math.floor(Math.random() * (a + 1)); [others[a], others[b]] = [others[b], others[a]]; }
+  const o = [i, ...others.slice(0, 3)];
+  for (let a = o.length - 1; a > 0; a--) { const b = Math.floor(Math.random() * (a + 1)); [o[a], o[b]] = [o[b], o[a]]; }
+  return o;
+}
+function pick(n) {
+  if (S.ended || mode() !== "choice" || S.revealed) return;
+  const o = S.opts[S.pos][n];
+  if (o === undefined || S.picked.includes(o) || removedOpts().includes(o)) return;
+  S.picked.push(o);
+  if (o === S.deck[S.pos]) { S.revealed = true; stopTimer(); }
+  renderCard();
+}
+function removedOpts() { return S.opts[S.pos].filter(o => o !== S.deck[S.pos]).slice(0, S.hints); }
+const SMALL = new Set(["a", "an", "the", "of", "in", "on", "up", "out", "off", "and", "your", "my", "with", "by", "is"]);
+function keyWord(a, k) { if (k) return k; return a.split(" ").filter(w => !SMALL.has(w.toLowerCase())).sort((x, y) => y.length - x.length)[0] || a.split(" ")[0]; }
+const value = () => Math.max(1, 3 - S.hints);
+
+function graphemes(str) {
+  if (window.Intl?.Segmenter) return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(str)].map(s => s.segment);
+  return Array.from(str);
+}
+
+function renderCard() {
+  const card = $("card");
+  if (S.ended || !S.deck.length) return renderEnd();
+  const it = cur(), md = mode(), hints = S.hints;
+  const chips = `<span class="chip level">${UNIT_NAME[it.u]}</span> <span class="chip">${MODE_NAME[md]}</span>`;
+  const val = S.revealed ? `<span class="chip value" style="background:var(--ok);border-color:var(--ok)">Answer</span>` : `<span class="chip value">Worth ${value()} pt${value() > 1 ? "s" : ""}</span>`;
+  const emojis = graphemes(it.c).map((g, i) => `<span style="animation-delay:${i * 70}ms">${g}</span>`).join("");
+  const emojiClue = `<p class="clue" aria-label="Emoji clue" style="--k:${graphemes(it.c).length}">${emojis}</p>`;
+  const span = gapSpan(it.a, it.ex);
+  const gapped = span ? `${it.ex.slice(0, span[0])}<span class="gap${S.revealed ? " filled" : ""}">${S.revealed ? it.ex.slice(span[0], span[1]) : "&nbsp;"}</span>${it.ex.slice(span[1])}` : it.ex;
+
+  let k = 0;
+  const key = keyWord(it.a, it.k).toLowerCase();
+  const slots = it.a.split(" ").map(w => `<span class="word">${[...w].map((ch, i) => {
+    if (!isLetter(ch)) return `<span class="box punct">${ch}</span>`;
+    const show = S.revealed || (hints >= 1 && i === 0) || (hints >= 2 && w.toLowerCase() === key);
+    const delay = S.revealed ? `style="animation-delay:${(k++) * 35}ms"` : "";
+    return `<span class="box${show ? " shown" : ""}" ${delay}>${show ? ch : ""}</span>`;
+  }).join("")}</span>`).join("");
+
+  let clue, middle, extra = `<div></div>`;
+  const panel = (title, body) => `<div class="reveal" style="grid-template-columns:1fr"><div><h3>${title}</h3>${body}</div></div>`;
+  if (md === "choice") {
+    clue = `<div style="display:grid;gap:6px;justify-items:center"><p class="clue-text idiom">${it.a}</p><div class="clue-mini">${it.c}</div></div>`;
+    const gone = removedOpts();
+    middle = `<div class="options">${S.opts[S.pos].map((o, n) => {
+      const cls = S.revealed && o === S.deck[S.pos] ? "right" : S.picked.includes(o) ? (o === S.deck[S.pos] ? "right" : "wrong") : gone.includes(o) ? "gone" : "";
+      return `<button class="opt ${cls}" type="button" data-opt="${n}" ${S.revealed || cls ? "disabled" : ""}><b>${"ABCD"[n]}</b><span>${IDIOMS[o].m}</span></button>`;
+    }).join("")}</div>`;
+    if (S.revealed) extra = panel("Example", `<span class="ex">${it.ex}</span>`);
+  } else {
+    middle = `<div class="slots">${slots}</div>`;
+    if (md === "emoji") clue = emojiClue;
+    else if (md === "meaning") clue = `<p class="clue-text">“${it.m}”</p>`;
+    else clue = `<p class="clue-text">${gapped}</p>`;
+    if (S.revealed) {
+      extra = md === "gap" ? `<div class="reveal"><div><h3>Meaning</h3>${it.m}</div><div><h3>Emojis</h3><span class="clue-mini">${it.c}</span></div></div>`
+        : `<div class="reveal"><div><h3>${md === "meaning" ? "Emojis" : "Meaning"}</h3>${md === "meaning" ? `<span class="clue-mini">${it.c}</span>` : it.m}</div><div class="ex"><h3>Example</h3>${it.ex}</div></div>`;
+    } else if (hints >= 3) {
+      extra = md === "emoji" ? panel("Hint: meaning", it.m) : md === "meaning" ? panel("Hint: emojis", `<span class="clue-mini">${it.c}</span>`) : panel("Hint: meaning", it.m);
+    }
+  }
+
+  card.innerHTML = `<div class="meta"><span>${chips}</span>${val}</div><div style="display:grid;gap:clamp(6px,1.4vh,14px);justify-items:center;align-self:center;width:100%"><p class="task">${MODE_TASK[md]}</p>${clue}</div>${middle}${extra}`;
+  $("progress").textContent = `Card ${S.pos + 1} of ${S.deck.length}`;
+  const left = Math.max(0, maxHints() - hints);
+  $("hintLeft").textContent = `${left} left`;
+  $("hintBtn").disabled = S.revealed || left === 0;
+  $("revealBtn").disabled = S.revealed;
+  $("prevBtn").disabled = S.pos === 0;
+  $("nextBtn").innerHTML = S.pos === S.deck.length - 1 ? "Finish" : "Next ›";
+  renderTeams();
+}
+
+function renderEnd() {
+  stopTimer();
+  const n = S.settings.teamCount;
+  const sc = S.scores.slice(0, n);
+  const top = Math.max(...sc);
+  const winners = S.settings.names.slice(0, n).filter((_, i) => sc[i] === top);
+  const title = !S.deck.length ? "No idioms selected"
+    : n === 1 ? `${top} point${top === 1 ? "" : "s"}!`
+    : winners.length > 1 ? `It's a tie: ${winners.join(" & ")}` : `${winners[0]} wins!`;
+  $("card").innerHTML = `<div class="end" style="grid-row:1 / -1">
+    <h2>${title}</h2>
+    <p>${S.deck.length ? `${S.deck.length} idioms played.` : "Open Setup and choose at least one unit."}</p>
+    <button class="big primary" id="againBtn" type="button" style="padding:0 28px">Play again</button></div>`;
+  $("againBtn").onclick = () => { S = freshState(S); start(); };
+  $("progress").textContent = "Round over";
+  ["hintBtn", "revealBtn", "nextBtn"].forEach(id => $(id).disabled = true);
+  $("prevBtn").disabled = !S.deck.length;
+  renderTeams();
+}
+
+function renderTeams() {
+  const n = S.settings.teamCount, el = $("teams");
+  el.style.setProperty("--n", n);
+  const v = value();
+  el.innerHTML = S.settings.names.slice(0, n).map((name, i) => `
+    <div class="team">
+      <span class="name">${escapeHtml(name)}</span>
+      <span class="score" id="score${i}">${S.scores[i]}</span>
+      <span class="award">
+        <button class="minus" type="button" data-minus="${i}" aria-label="Take 1 point from ${escapeHtml(name)}">−</button>
+        <button type="button" data-award="${i}" ${S.ended || S.awarded[S.pos] !== undefined ? "disabled style='opacity:.35'" : ""}
+          aria-label="Give ${v} points to ${escapeHtml(name)}">+${v}</button>
+      </span>
+    </div>`).join("");
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function bump(i) { const s = $("score" + i); if (s) { s.classList.remove("bump"); void s.offsetWidth; s.classList.add("bump"); } }
+
+function award(i) {
+  if (S.ended || i >= S.settings.teamCount || S.awarded[S.pos] !== undefined) return;
+  S.scores[i] += value();
+  S.awarded[S.pos] = i;
+  S.revealed = true; stopTimer();
+  renderCard(); bump(i);
+}
+function minus(i) { S.scores[i] = Math.max(0, S.scores[i] - 1); renderTeams(); bump(i); }
+function hint() { if (S.ended || S.revealed || S.hints >= maxHints()) return; S.hints++; renderCard(); }
+function reveal() { if (S.ended || S.revealed) return; S.revealed = true; stopTimer(); renderCard(); }
+function go(d) {
+  if (S.ended) { if (d < 0 && S.deck.length) { S.ended = false; renderCard(); } return; }
+  const p = S.pos + d;
+  if (p < 0) return;
+  if (p >= S.deck.length) { S.ended = true; return renderCard(); }
+  S.pos = p; S.hints = 0; S.picked = []; S.revealed = S.awarded[p] !== undefined;
+  resetTimer(); renderCard();
+}
+
+/* timer */
+let tick = null;
+function renderTimer() {
+  const t = $("timer"), total = S.settings.timer;
+  t.classList.remove("low", "done");
+  if (!total) { t.textContent = "No timer"; t.style.fontSize = "1rem"; return; }
+  t.style.fontSize = "";
+  if (S.timeLeft <= 0) { t.textContent = "Time!"; t.classList.add("done"); return; }
+  const m = Math.floor(S.timeLeft / 60), s = String(S.timeLeft % 60).padStart(2, "0");
+  t.textContent = (S.running ? "" : "▶ ") + `${m}:${s}`;
+  if (S.running && S.timeLeft <= 10) t.classList.add("low");
+}
+function startTimer() {
+  if (!S.settings.timer || S.revealed || S.ended || S.timeLeft <= 0) return;
+  S.running = true; clearInterval(tick);
+  tick = setInterval(() => { S.timeLeft--; if (S.timeLeft <= 0) { S.timeLeft = 0; stopTimer(); } renderTimer(); }, 1000);
+  renderTimer();
+}
+function stopTimer() { S.running = false; clearInterval(tick); tick = null; renderTimer(); }
+function resetTimer() { stopTimer(); S.timeLeft = S.settings.timer; renderTimer(); startTimer(); }
+function toggleTimer() {
+  if (!S.settings.timer) return;
+  if (S.timeLeft <= 0) { S.timeLeft = S.settings.timer; startTimer(); return; }
+  S.running ? stopTimer() : startTimer();
+}
+
+/* setup */
+function openSetup() {
+  const st = S.settings;
+  $("tc" + st.teamCount).checked = true;
+  for (let i = 0; i < 4; i++) { $("n" + (i + 1)).value = st.names[i]; }
+  const units = st.units || UNITS.map(u => u[0]);
+  UNITS.forEach(([v]) => $("un" + v).checked = units.includes(v));
+  const modes = st.modes || ["emoji"];
+  MODES.forEach(([v]) => $("md" + v).checked = modes.includes(v));
+  $("tm" + st.timer).checked = true;
+  syncNames();
+  stopTimer();
+  $("setup").showModal();
+}
+function syncNames() {
+  const n = +document.querySelector('input[name="tc"]:checked').value;
+  for (let i = 1; i <= 4; i++) $("n" + i).disabled = i > n;
+}
+$("teamCount").addEventListener("change", syncNames);
+$("setup").addEventListener("close", () => {
+  if ($("setup").returnValue !== "apply") { if (!S.revealed && !S.ended) startTimer(); return; }
+  const settings = {
+    teamCount: +document.querySelector('input[name="tc"]:checked').value,
+    names: [1, 2, 3, 4].map(i => $("n" + i).value.trim() || DEFAULT_NAMES[i - 1]),
+    units: UNITS.map(u => u[0]).filter(v => $("un" + v).checked),
+    modes: MODES.map(m => m[0]).filter(v => $("md" + v).checked),
+    timer: +document.querySelector('input[name="tm"]:checked').value
+  };
+  S = freshState({ settings });
+  start();
+});
+
+/* full screen */
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  } catch (e) {}
+}
+document.addEventListener("fullscreenchange", () => $("fsBtn").textContent = document.fullscreenElement ? "Exit full screen" : "Full screen");
+
+/* wiring */
+$("hintBtn").onclick = hint;
+$("revealBtn").onclick = reveal;
+$("nextBtn").onclick = () => go(1);
+$("prevBtn").onclick = () => go(-1);
+$("timer").onclick = toggleTimer;
+$("setupBtn").onclick = openSetup;
+$("fsBtn").onclick = toggleFs;
+$("card").addEventListener("click", e => { const o = e.target.closest("[data-opt]"); if (o) pick(+o.dataset.opt); });
+$("teams").addEventListener("click", e => {
+  const a = e.target.closest("[data-award]"), m = e.target.closest("[data-minus]");
+  if (a) award(+a.dataset.award); else if (m) minus(+m.dataset.minus);
+});
+document.addEventListener("keydown", e => {
+  if ($("setup").open || e.target.matches("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (k === "ArrowRight" || k === "n" || k === "N") go(1);
+  else if (k === "ArrowLeft") go(-1);
+  else if (k === " " || k === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); S.revealed ? go(1) : reveal(); }
+  else if (k === "h" || k === "H") hint();
+  else if (k === "t" || k === "T") toggleTimer();
+  else if (k === "f" || k === "F") toggleFs();
+  else if (/^[1-4]$/.test(k)) award(+k - 1);
+  else if (/^[a-dA-D]$/.test(k)) pick("abcd".indexOf(k.toLowerCase()));
+  else return;
+});
+
+function start() { renderCard(); resetTimer(); if (S.ended) stopTimer(); }
+
+function boot(data) {
+  S = data && data.S && Array.isArray(data.S.deck) && data.S.settings?.units && data.S.v === 3 ? data.S : freshState();
+  S.running = false;
+  renderCard(); renderTimer();
+  if (!data?.S) startTimer();
+}
+boot({});
+</script>
+
+</body>
+</html>
